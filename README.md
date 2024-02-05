@@ -1,4 +1,4 @@
-#XKB Layout Switcher
+# XKB Layout Switcher
 A very simple and basic keyboard layout switcher for linux.
 
 **Usage**
