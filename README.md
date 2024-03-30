@@ -1,4 +1,4 @@
-**List:**
+# Linux utilities
 **PartitionManager TUI**
 Basic TUI app which allows to mount, unmount, power-off connected storage devices. UI is heavily inspired by nmtui.
 
