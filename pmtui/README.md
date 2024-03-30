@@ -1,7 +1,6 @@
 # PartitionManager TUI
 Basic TUI app which allows to mount, unmount, power-off connected storage devices. UI is heavily inspired by nmtui.
 
-**Screenshot:**
 ![screenshoot-2024-03-30-18_25_28](https://github.com/vulpes-vulpeos/linux-utilities/assets/40931454/36a68eb6-3596-417a-b86b-180b5d1c8399)
 
 **Dependencies:**
