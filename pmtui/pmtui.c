@@ -229,7 +229,7 @@ int manage_device(const char ** devnode, int * bwin_sel){
         };
     };
     pclose(fp);
-
+    free(command);
     return error;
 }
 
@@ -335,6 +335,8 @@ void ncurses_init(){
     noecho(); // Disable showing of keys pressed
     keypad(stdscr, TRUE); // Enable keys like F1, F2, arrow keys etc.
     curs_set(FALSE); //Don't display a cursor
+    timeout(100); // Set a timeout
+    ESCDELAY = 500; // Faster ESC key. 1000 - default
 
     // Colors section
     start_color();
@@ -346,6 +348,16 @@ void ncurses_init(){
     init_pair(6, COLOR_WHITE, COLOR_RED);   // Active selection
     init_pair(7, COLOR_WHITE, COLOR_BLUE);  // Nonactive selection
     init_pair(8, COLOR_BLACK, COLOR_RED);   // dialog background
+}
+
+void close_app(device ***list_arr, int *list_arr_size){
+    endwin();
+    // Cleanup
+    for (int i = 0; i < *list_arr_size; ++i){
+        free((*list_arr)[i]);
+    };
+    free(*list_arr);
+    exit(0);
 }
 
 int main() {
@@ -379,7 +391,7 @@ int main() {
                         "Device is in use",
                         "Object is not a mountable filesystem.",
                         "Something went wrong."};
-                        
+
     int bwin_foc = 0,
         bwin_sel = -1;
     int lwin_foc = TRUE,
@@ -396,7 +408,8 @@ int main() {
 
     // Parsing keys input
     int ch = 0;
-    while ((ch = getch()) != 'q') { // 'q' key to quit
+    //while ((ch = getch()) != 'q') { // 'q' key to quit
+    while ((ch = getch())) {
         switch (ch) {
             case KEY_UP:
                 if (lwin_foc) {
@@ -460,6 +473,20 @@ int main() {
                     draw_lwin(&lwin, &lwin_foc, &list_arr, &list_arr_size, &lwin_sel, &lwin_max_sel);
                     draw_bwin(&bwin, &bwin_foc, &btns_arr, &bwin_sel);
                 };
+                break;
+            case 27: // Escape button
+                if (bwin_foc) {
+                    bwin_foc = FALSE;
+                    lwin_foc = TRUE;
+                    draw_lwin(&lwin, &lwin_foc, &list_arr, &list_arr_size, &lwin_sel, &lwin_max_sel);
+                    draw_bwin(&bwin, &bwin_foc, &btns_arr, &bwin_sel);
+                } else if (lwin_foc){
+                    close_app(&list_arr, &list_arr_size);
+                    return 0;
+                };
+                break;
+            case 'q':
+                close_app(&list_arr, &list_arr_size);
                 break;
 
             case KEY_ENTER:
@@ -526,7 +553,7 @@ int main() {
                         draw_bwin(&bwin, &bwin_foc, &btns_arr, &bwin_sel);
                     };
                     if (bwin_sel == BTN_EXIT){
-                        endwin(); // End the ncurses mode
+                        close_app(&list_arr, &list_arr_size);
                         return 0;
                     };
                 } else if (lwin_foc) {
