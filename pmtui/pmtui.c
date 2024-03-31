@@ -528,8 +528,6 @@ int main() {
                             draw_dwin(&dwin, &err_msg[result]);
                             bwin_sel = BTN_REFR;
                         };
-                        draw_lwin(&lwin, &lwin_foc, &list_arr, &list_arr_size, &lwin_sel, &lwin_max_sel);
-                        draw_bwin(&bwin, &bwin_foc, &btns_arr, &bwin_sel);
                     };
                     if (bwin_sel == BTN_EJCT){
                         int result = manage_device(&list_arr[lwin_sel-1]->devnode, &bwin_sel);
@@ -539,9 +537,8 @@ int main() {
                         } else {
                             WINDOW *dwin = newwin(5, COLS-14, (LINES/2)-4, 7); // h, w, x, y
                             draw_dwin(&dwin, &err_msg[result]);
+                            bwin_sel = BTN_REFR;
                         };
-                        draw_lwin(&lwin, &lwin_foc, &list_arr, &list_arr_size, &lwin_sel, &lwin_max_sel);
-                        draw_bwin(&bwin, &bwin_foc, &btns_arr, &bwin_sel);
                     };
                     if (bwin_sel == BTN_REFR){
                         list_arr_size = 0;
