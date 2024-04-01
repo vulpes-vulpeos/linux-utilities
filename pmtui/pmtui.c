@@ -331,12 +331,11 @@ void fill_list_arr(device ***list_arr, int *list_arr_size){
 void ncurses_init(){
     setlocale(LC_ALL, "en_US.UTF-8");
     initscr();
-    cbreak(); // Disable buffering // Or raw();
-    noecho(); // Disable showing of keys pressed
+    cbreak();             // Disable buffering // Or raw();
+    noecho();             // Disable showing of keys pressed
     keypad(stdscr, TRUE); // Enable keys like F1, F2, arrow keys etc.
-    curs_set(FALSE); //Don't display a cursor
-    timeout(100); // Set a timeout
-    ESCDELAY = 500; // Faster ESC key. 1000 - default
+    curs_set(FALSE);      // Don't display a cursor
+    ESCDELAY = 500;       // Faster ESC key. 1000 - default
 
     // Colors section
     start_color();
