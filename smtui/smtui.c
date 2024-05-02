@@ -1,3 +1,7 @@
+// cd /media/internal_hdd/Development/c/smtui
+// gcc smtui.c -o smtui -lncursesw -lpulse
+
+#include <pulse/context.h>
 #include <pulse/introspect.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -212,7 +216,7 @@ void ncurses_init(){
     noecho(); // Disable showing of keys pressed
     keypad(stdscr, TRUE); // Enable keys like F1, F2, arrow keys etc.
     curs_set(FALSE); // Don't display a cursor
-    ESCDELAY = 500; // Faster ESC key. 1000 - default
+    set_escdelay (500); // Faster ESC key. 1000 - default
 
     // Colors section
     start_color();
@@ -226,49 +230,56 @@ void ncurses_init(){
     init_pair(7, COLOR_BLACK, COLOR_RED);   // Dialog background
 }
 
-
+int g_par_ctr = 0;
 void pa_ports_data_cb(pa_context *c, const pa_card_info *card_info, int eol, void *userdata) {
     pa_data *data = (pa_data *)userdata;     
 	
     if (eol > 0) {return;}; // Positive eol => end of the list
-    int par_ctr = 0;
-  	// TODO: Fix par_ctr to support multiple sound cards
-  	// while potr data !NULL -> increase by 1
-  	// or add saparate value like ports filled
+    
+  	// TODO: Fix use of global value
 	for (int po_ctr = 0; po_ctr < (card_info->n_ports); ++po_ctr){
 		if (card_info->ports[po_ctr]->available == PA_PORT_AVAILABLE_NO ||
 			card_info->ports[po_ctr]->direction == PA_DIRECTION_INPUT){continue;};
 		// Card index
-		data->ports[par_ctr].card_index = card_info->index;
+		data->ports[g_par_ctr].card_index = card_info->index;
     	// alsa.card_name
     	int str_len = strlen(pa_proplist_gets(card_info->proplist, "alsa.card_name"))+1;
-    	data->ports[par_ctr].card_name = calloc(str_len, sizeof(char));
-    	strcpy(data->ports[par_ctr].card_name, pa_proplist_gets(card_info->proplist, "alsa.card_name"));
+    	data->ports[g_par_ctr].card_name = calloc(str_len, sizeof(char));
+    	strcpy(data->ports[g_par_ctr].card_name, pa_proplist_gets(card_info->proplist, "alsa.card_name"));
 		// Port name
 		str_len = strlen(card_info->ports[po_ctr]->name)+1;
-		data->ports[par_ctr].port_name = calloc(str_len, sizeof(char));
-    	strcpy(data->ports[par_ctr].port_name, card_info->ports[po_ctr]->name);
+		data->ports[g_par_ctr].port_name = calloc(str_len, sizeof(char));
+    	strcpy(data->ports[g_par_ctr].port_name, card_info->ports[po_ctr]->name);
     	// Port description
     	str_len = strlen(card_info->ports[po_ctr]->description)+1;
-    	data->ports[par_ctr].port_desc = calloc(str_len, sizeof(char));
-    	strcpy(data->ports[par_ctr].port_desc, card_info->ports[po_ctr]->description);
+    	data->ports[g_par_ctr].port_desc = calloc(str_len, sizeof(char));
+    	strcpy(data->ports[g_par_ctr].port_desc, card_info->ports[po_ctr]->description);
 		// Number of port profiles
-    	data->ports[par_ctr].pprof_ttl = card_info->ports[po_ctr]->n_profiles;
+    	data->ports[g_par_ctr].pprof_ttl = card_info->ports[po_ctr]->n_profiles;
 		// Port profiles array
-		data->ports[par_ctr].port_prof = calloc(data->ports[par_ctr].pprof_ttl, sizeof(char *));
-		for (int pr_ctr = 0; pr_ctr < data->ports[par_ctr].pprof_ttl; ++pr_ctr){
+		data->ports[g_par_ctr].port_prof = calloc(data->ports[g_par_ctr].pprof_ttl, sizeof(char *));
+		for (int pr_ctr = 0; pr_ctr < data->ports[g_par_ctr].pprof_ttl; ++pr_ctr){
 			str_len = strlen(card_info->ports[po_ctr]->profiles2[pr_ctr]->name)+1;
-			data->ports[par_ctr].port_prof[pr_ctr] = calloc(str_len, sizeof(char));
-			strcpy(data->ports[par_ctr].port_prof[pr_ctr], card_info->ports[po_ctr]->profiles2[pr_ctr]->name);
+			data->ports[g_par_ctr].port_prof[pr_ctr] = calloc(str_len, sizeof(char));
+			strcpy(data->ports[g_par_ctr].port_prof[pr_ctr], card_info->ports[po_ctr]->profiles2[pr_ctr]->name);
 		};
 		// Port activeness
-		data->ports[par_ctr].active = 0;
-    	if (!strcmp(data->ports[par_ctr].port_name, data->act_port)){
-    		data->ports[par_ctr].active = 1;
+		data->ports[g_par_ctr].active = 0;
+    	if (!strcmp(data->ports[g_par_ctr].port_name, data->act_port)){
+    		data->ports[g_par_ctr].active = 1;
     	};
     	
-    	++par_ctr;
+    	++g_par_ctr;
     };
+}
+
+void pa_sinkname_cb(pa_context *c, const pa_sink_info *sink_info, int eol, void *userdata) {
+    char **sink_name = (char **)userdata;  
+    
+    if (eol > 0) {return;}; // Positive eol => end of the list
+    int str_len = strlen(sink_info->name)+1;
+    *sink_name = calloc(str_len, sizeof(char));
+    strcpy(*sink_name, sink_info->name);
 }
 
 void pa_sinkdata_cb(pa_context *c, const pa_sink_info *sink_info, int eol, void *userdata) {
@@ -289,6 +300,7 @@ void pa_crds_prts_ttl_cb(pa_context *c, const pa_card_info *card_info, int eol, 
     	++(data->cards_ttl);
     	int str_len = strlen(card_info->active_profile2->name)+1;
     	// TODO: Solve issue with several cards
+        //       if there are any
 	    data->act_prof = calloc(str_len, sizeof(char));
 	    strcpy(data->act_prof, card_info->active_profile2->name);
     	for (int i = 0; i < card_info->n_ports; ++i){
@@ -344,10 +356,21 @@ void set_sink(uint32_t *card_ind, char *port_prof, int *sink_ind, char *port_nam
     while (pa_operation_get_state(pa_op) == PA_OPERATION_RUNNING){pa_mainloop_iterate(pa_ml, 1, NULL);};
 	pa_operation_unref(pa_op);
 
-    // Setting sink port
-    pa_op = pa_context_set_sink_port_by_index(pa_ctx, *sink_ind, port_name, NULL, NULL);
+    // Setting sink port                              // change back to sink_ind if spmething wrong
+    pa_op = pa_context_set_sink_port_by_index(pa_ctx, *card_ind, port_name, NULL, NULL);
     while (pa_operation_get_state(pa_op) == PA_OPERATION_RUNNING){pa_mainloop_iterate(pa_ml, 1, NULL);};
 	pa_operation_unref(pa_op);
+
+    // Getting name of target sink
+    char *sink_name = NULL;
+    pa_op = pa_context_get_sink_info_by_index(pa_ctx, *card_ind, pa_sinkname_cb, &sink_name);
+    while (pa_operation_get_state(pa_op) == PA_OPERATION_RUNNING){pa_mainloop_iterate(pa_ml, 1, NULL);};
+    pa_operation_unref(pa_op);
+    
+    // Setting default sink
+    pa_op = pa_context_set_default_sink(pa_ctx, sink_name, NULL, NULL);
+    while (pa_operation_get_state(pa_op) == PA_OPERATION_RUNNING){pa_mainloop_iterate(pa_ml, 1, NULL);};
+    pa_operation_unref(pa_op);
 	
     pa_context_disconnect(pa_ctx);
     pa_context_unref(pa_ctx);
@@ -458,6 +481,7 @@ int main(int argc, char *argv[]) {
 		return 1;
     };
     //print_data(&data);
+    //return 0;
 
     // ncurses
     ncurses_init();
@@ -478,6 +502,7 @@ int main(int argc, char *argv[]) {
 	draw_bwin(&bwin, btns_arr);
 	// List window
 	int lwin_h = (mwin.h/4)*3;
+    if (mwin.h-lwin_h-3 <= 3){lwin_h -= 2;};
 	if (lwin_h%2 != 0){--lwin_h;};
     ncwin_par lwin = {.win = newwin(lwin_h, mwin.w-bwin.w-3,
     								mwin.l+2, mwin.c+2), 
@@ -660,12 +685,13 @@ int main(int argc, char *argv[]) {
             					 data.ports[lwin.sel-1].port_prof[pwin.sel-1],
             					 &data.sink_ind,
             					 data.ports[lwin.sel-1].port_name);
-            			bwin.sel = 3;
+            			bwin.sel = 2;
             		};
             		// Refresh button
             		if (bwin.sel == 2){
             			lwin.sel = 1;
             			pwin.sel = act_prof_check(&data, &lwin);
+                        g_par_ctr = 0;
 
 	            		lwin.foc = TRUE;
             			pwin.foc = FALSE;
