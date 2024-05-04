@@ -297,16 +297,16 @@ void mute_other_ports(pa_port **ports_arr, int *ports_ttl, int *lwin_sel){
     snd_mixer_elem_t *elem;
     snd_mixer_selem_id_t *sid;
 
-    // !!! Needs rework !!!
     for (int port_ctr = 0; port_ctr < (*ports_ttl); ++port_ctr){
         // ignore ports without name
-        if ((*ports_arr)[port_ctr].aport_name == NULL){continue;};
-        // ignore port if active
-        if ((*ports_arr)[port_ctr].is_active == TRUE){continue;};
-        // ignore ports from different sound card
-        if ((*ports_arr)[port_ctr].card_index != (*ports_arr)[sel_port].card_index){continue;};
-        // ignore other type of ports
-        if (strcmp((*ports_arr)[port_ctr].aport_name,(*ports_arr)[sel_port].aport_name) != 0){continue;};
+        if ((*ports_arr)[port_ctr].aport_name == NULL ||
+            // ignore selected port
+            port_ctr == sel_port ||
+            // ignore ports from other sound card
+            (*ports_arr)[port_ctr].card_index != (*ports_arr)[sel_port].card_index ||
+            // ignore other type of ports
+            strcmp((*ports_arr)[port_ctr].aport_name,(*ports_arr)[sel_port].aport_name) != 0
+            ){continue;};
         
         snd_mixer_selem_id_set_index(sid, (*ports_arr)[port_ctr].port_index);
         snd_mixer_selem_id_set_name(sid, (*ports_arr)[port_ctr].aport_name);
@@ -900,7 +900,7 @@ int main(int argc, char *argv[]) {
             		//Set button
             		if (bwin.sel == 1){
             			set_sink(&data.ports[lwin.sel-1], &pwin.sel);
-                        //mute_other_ports(&data.ports, &data.ports_ttl, &lwin.sel);
+                        mute_other_ports(&data.ports, &data.ports_ttl, &lwin.sel);
             			bwin.sel = 2;
             		};
             		// Refresh button
