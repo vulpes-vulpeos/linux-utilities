@@ -11,7 +11,7 @@ Basic TUI app which allows to switch sound output port. UI is heavily inspired b
    
    ```sudo apt install libncurses-dev libpulse-dev libasound2-dev``` - Debian
    
-   ```sudo zypper install ncurses-dev libpulse-devel alsa-devel``` - OpenSuse
+   ```sudo zypper install ncurses-devel libpulse-devel alsa-devel``` - OpenSuse
    
 2. Compile with:
    ```gcc -O2 "/path/to/smtui.c" -o "/output/path/smtui" -lncursesw -lpulse -lasound```
