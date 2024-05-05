@@ -667,23 +667,38 @@ void print_data(pa_data *data) {
 	};
 }
 
-void close_app(pa_data *data){
-    endwin();
-
-    // Memory cleanup
-    /*
+void memory_cleanup(pa_data *data){
     free(data->def_sink_act_port);
-    for (int i = 0; i < data->ports_ttl; ++i){
-    	free(data->ports[i].card_name);
-    	free(data->ports[i].port_name);
-    	free(data->ports[i].port_desc);
-    	for (int j = 0; j < data->ports[i].pprof_ttl; ++j){
-    		free(data->ports[i].port_prof[j]);
-    	};
-    	free(data->ports[i].port_prof);
+    // Freeing sinks sink_name
+    for (int ctr = 0; ctr < data->sinks_ttl; ++ctr){
+        free(data->sinks[ctr].sink_name);
+    }
+    free(data->sinks);
+    // Freeing cards act_prof
+    for (int ctr = 0; ctr < data->cards_ttl; ++ctr){
+        free(data->cards[ctr].act_prof);
+    }
+    free(data->cards);
+    // Freeing ports data
+    for (int port_ctr = 0; port_ctr < data->ports_ttl; ++port_ctr){
+        free(data->ports[port_ctr].card_name);
+        free(data->ports[port_ctr].sink_name);
+        free(data->ports[port_ctr].port_name);
+        free(data->ports[port_ctr].aport_name);
+        free(data->ports[port_ctr].port_desc);
+
+        for (int prof_ctr = 0; prof_ctr < data->ports[port_ctr].pprof_ttl; ++prof_ctr){
+            free(data->ports[port_ctr].port_prof[prof_ctr]);
+        };
+        free(data->ports[port_ctr].port_prof);
     };
     free(data->ports);
-    */
+}
+
+void close_app(pa_data *data){
+    endwin();
+    memory_cleanup(data);
+    
     exit(0);
 }
 
@@ -912,7 +927,9 @@ int main(int argc, char *argv[]) {
             			pwin.foc = FALSE;
 	            		bwin.foc = FALSE;
 
+                        memory_cleanup(&data);
             			fill_data(&data);
+
             			draw_lwin(&lwin, &data);
             			draw_pwin(&pwin, &lwin, &data);
                     	draw_bwin(&bwin, btns_arr);
