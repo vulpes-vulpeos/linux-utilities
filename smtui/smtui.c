@@ -1,5 +1,4 @@
-// cd /media/internal_hdd/Development/c/smtui
-// gcc smtui.c -o smtui -lncursesw -lpulse
+// gcc smtui.c -o smtui -lncursesw -lpulse -lasound
 
 #include <ctype.h>
 #include <pulse/context.h>
@@ -319,24 +318,14 @@ void mute_other_ports(pa_port **ports_arr, int *ports_ttl, int *lwin_sel){
             snd_mixer_close(handle);
             exit(1);
         }
-        
-        // Mute left and right channel
-        if ((err = snd_mixer_selem_set_playback_volume (elem, SND_MIXER_SCHN_FRONT_LEFT, 0)) < 0) {
+
+        if ((err = snd_mixer_selem_set_playback_volume_all (elem, min_vol)) < 0) {
             endwin();
-            printf("Cannot mute front left for mixer element: %s | %d\n", (*ports_arr)[port_ctr].aport_name, (*ports_arr)[port_ctr].port_index);
+            printf("Cannot mute mixer element: %s | %d\n", (*ports_arr)[port_ctr].aport_name, (*ports_arr)[port_ctr].port_index);
             snd_mixer_close(handle);
             exit(1);
-        }; 
-        if ((err = snd_mixer_selem_set_playback_volume (elem, SND_MIXER_SCHN_FRONT_RIGHT, 0)) < 0) {
-            endwin();
-            printf("Cannot mute front left for mixer element: %s | %d\n", (*ports_arr)[port_ctr].aport_name, (*ports_arr)[port_ctr].port_index);
-            snd_mixer_close(handle);
-            exit(1);
-        }; 
+        };
     }
-    
-    //mvwprintw(stdscr, 0, 0, "%d",sp_ctr);
-    //wrefresh(stdscr);
 
     // Close the mixer
     snd_mixer_close(handle);
@@ -412,7 +401,7 @@ void pa_cards_and_ports_data_cb(pa_context *c, const pa_card_info *card_info, in
 
     ++data->cards_ctr;
 
-    // TODO: Fix use of global value
+    // TODO: Fix use of global variable
 	for (int for_ctr = 0; for_ctr < (card_info->n_ports); ++for_ctr){
 		if (card_info->ports[for_ctr]->available == PA_PORT_AVAILABLE_NO ||
 			card_info->ports[for_ctr]->direction == PA_DIRECTION_INPUT){continue;};
