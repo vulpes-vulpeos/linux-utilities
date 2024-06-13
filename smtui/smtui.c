@@ -1,3 +1,4 @@
+// cd /media/internal_hdd/Development/c/smtui
 // gcc smtui.c -o smtui -lncursesw -lpulse -lasound
 
 #include <ctype.h>
@@ -19,6 +20,7 @@
 
 struct pa_port {
 	uint32_t   card_index;
+    uint32_t   al_card_index;
     uint32_t   sink_index;
 	char      *card_name;
     char      *sink_name;
@@ -260,7 +262,7 @@ void mute_other_ports(pa_port **ports_arr, int *ports_ttl, int *lwin_sel){
     snd_mixer_t *handle;
     
     int sel_port = (*lwin_sel)-1;
-    int cur_card_ind = (*ports_arr)[sel_port].card_index;
+    int cur_card_ind = (*ports_arr)[sel_port].al_card_index;
     char *card_str;
     sprintf(card_str, "hw:%d", cur_card_ind);
 
@@ -407,6 +409,8 @@ void pa_cards_and_ports_data_cb(pa_context *c, const pa_card_info *card_info, in
 			card_info->ports[for_ctr]->direction == PA_DIRECTION_INPUT){continue;};
 		// Card index
 		data->ports[data->ports_ctr].card_index = card_info->index;
+        // Pulseaudio and Alsa indexes can be different
+        data->ports[data->ports_ctr].al_card_index = atoi(pa_proplist_gets(card_info->proplist, "alsa.card"));
         // Sink index and name
         for (int for_ctr = 0; for_ctr < data->sinks_ttl; ++for_ctr){
             if (data->ports[data->ports_ctr].card_index == data->sinks[for_ctr].card_index){
