@@ -1,4 +1,3 @@
-// cd /media/internal_hdd/Development/c/smtui
 // gcc smtui.c -o smtui -lncursesw -lpulse -lasound
 
 #include <ctype.h>
