@@ -10,3 +10,7 @@ Basic TUI app which allows to switch sound output port. UI is heavily inspired b
 **XKB Layout Switcher**
 
 A very simple and basic cli keyboard layout switcher for linux.
+
+**System info notification**
+
+Script showing notification with system info. Usefull when running fullscreen apps/games.
