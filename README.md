@@ -14,3 +14,7 @@ A very simple and basic cli keyboard layout switcher for linux.
 **System info notification**
 
 Script showing notification with system info. Usefull when running fullscreen apps/games.
+
+**duhist**
+
+Prints out notifications from [dunst](https://github.com/dunst-project/dunst) history.
