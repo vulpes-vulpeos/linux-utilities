@@ -107,11 +107,13 @@ int get_history_size() {
 int main() {
     int hist_size = get_history_size();
 
-    ENTRY entries[hist_size];
-    get_dunst_history(entries);
+    if (hist_size > 0){
+        ENTRY entries[hist_size];
+        get_dunst_history(entries);
 
-    for (int i = 0; i < hist_size; ++i){
-        printf("\033[1m%s\033[m - \033[1;34m%s\033[m - %s\n%s\n%s\n", entries[i].timestamp_str, entries[i].appname, entries[i].summary, entries[i].body,(i == hist_size-1) ? "" : "-----");
+        for (int i = 0; i < hist_size; ++i){
+            printf("\033[1m%s\033[m - \033[1;34m%s\033[m - %s\n%s\n%s\n", entries[i].timestamp_str, entries[i].appname, entries[i].summary, entries[i].body,(i == hist_size-1) ? "" : "-----");
+        };
     };
 
     return 0;
