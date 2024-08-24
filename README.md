@@ -18,3 +18,7 @@ Script showing notification with system info. Usefull when running fullscreen ap
 **duhist**
 
 Prints out notifications from [dunst](https://github.com/dunst-project/dunst) history.
+
+**Frank**
+Yet another snake game nobody needs.
+
