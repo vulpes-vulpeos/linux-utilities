@@ -1,4 +1,3 @@
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -111,8 +110,8 @@ int main() {
         ENTRY entries[hist_size];
         get_dunst_history(entries);
 
-        for (int i = 0; i < hist_size; ++i){
-            printf("\033[1m%s\033[m - \033[1;34m%s\033[m - %s\n%s\n%s\n", entries[i].timestamp_str, entries[i].appname, entries[i].summary, entries[i].body,(i == hist_size-1) ? "" : "-----");
+        for (int i = hist_size-1; i >= 0; --i){
+            printf("\033[1m%s\033[m - \033[1;34m%s\033[m - %s\n%s\n%s\n", entries[i].timestamp_str, entries[i].appname, entries[i].summary, entries[i].body,(i == 0) ? "" : "-----");
         };
     };
 
