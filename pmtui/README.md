@@ -1,14 +1,17 @@
 # PartitionManager TUI
-Basic TUI app which allows to mount, unmount, power-off connected storage devices. UI is heavily inspired by nmtui.
+Basic TUI app which allows you to mount, unmount, power-off connected storage devices.  
+It displays it's menu inside the current terminal session. Also it prints actions log after exit.  
 
-![screenshoot-2024-03-30-18_25_28](https://github.com/vulpes-vulpeos/linux-utilities/assets/40931454/36a68eb6-3596-417a-b86b-180b5d1c8399)
+![screenshoot-2024-10-09_11-42-59](https://github.com/user-attachments/assets/8929a1fd-4c60-4221-9e49-eb48d424a7fd)  
 
 **Dependencies:**
-- udisks2
-- eject from util-linux
+- libudev
+- udisks2  
+- eject from util-linux  
 
 **Compiling:**
-1. Install libncurses-dev and libudev-dev:
-   ```sudo apt install libncurses-dev libudev-dev```
-2. Compile with:
-   ```gcc -O2 "/path/to/pmtui.c" -o "/output/path/pmtui" -lncursesw -ludev```
+1. Install libudev:  
+   ```sudo apt install libudev-dev```  
+   ```sudo xbps-install eudev-libudev-devel```  
+2. Compile with:  
+   ```gcc -O2 "/path/to/pmtui.c" -o "/output/path/pmtui" -ludev```
