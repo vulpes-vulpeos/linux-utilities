@@ -72,6 +72,7 @@ int qsort_comp (const void *elem1, const void *elem2) {
 int main() {
     parse_directory("/home/vulpeos/.local/share/applications");
     parse_directory("/usr/share/applications");
+    if (app_ctr == 0){ printf("[WMENU_DESKTOP] no .desktop files found\n"); return 1; };
 
     // sort case insensetive
     qsort(apps, app_ctr, sizeof(App), qsort_comp);
