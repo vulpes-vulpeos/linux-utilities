@@ -17,5 +17,5 @@ Prints out notifications from [dunst](https://github.com/dunst-project/dunst) hi
 **Frank**  
 Yet another snake game nobody needs.
 
-**w(d)menu_run**  
-A simple bash script which show list of apps formed from .desktop files. Should work with wmenu and dmenu.
+**wmenu_desktop**  
+A simple bash script and c app which get list of apps formed from .desktop files and passes it to wmenu or dmenu (change to desired app in code).
