@@ -8,35 +8,49 @@
 #define MAX_APPS 1024
 #define BUFFER_SIZE 4096 // This is max path length
 
-struct App { char *app_name; char *exec_path; int terminal; } typedef App;
+struct App { char *dpath, *app_name, *exec_path; int terminal; } typedef App;
 
 App apps[MAX_APPS]; // TODO do not use global variables
 size_t app_ctr = 0;
 
-void parse_desktop_file(const char *filepath) {
+void exec_parse(App *selected) {
+    // II parse to get execution path and check if it's terminal app
+    FILE *file = fopen(selected->dpath, "r");
+    if (!file){return; }; // exec_path will stay NULL if something goes wrong
+
+    char line[BUFFER_SIZE];
+    while (fgets(line, sizeof(line), file)) {
+        if (!selected->exec_path && strncmp(line, "Exec=", 5) == 0) {
+            selected->exec_path = strndup(line + 5, strlen(line +5)-1);
+            selected->exec_path[strcspn(selected->exec_path, "%")] = '\0';
+        } else if (selected->terminal == 0 && strcmp(line, "Terminal=true\n") == 0) { selected->terminal = 1; };
+
+        if (selected->exec_path && selected->terminal) { break; };
+    };
+
+    fclose(file);
+}
+
+void base_parse(const char *filepath) {
+    // Getting only filepath, app name and skip hidden apps. Do not waste time on filling other fields for all apps.
     FILE *file = fopen(filepath, "r");
     if (!file){return; };
 
-    char line[BUFFER_SIZE];
-    char *app_name = NULL, *exec_path = NULL;
-    int terminal = 0, hidden = 0;
-    int fl_name = 0, fl_exec = 0, fl_term = 0, fl_hidd = 0;
+    char line[BUFFER_SIZE], *app_name = NULL;
+    int hidden = 0;
     while (fgets(line, sizeof(line), file)) {
-        if (!fl_name && strncmp(line, "Name=", 5) == 0) { app_name = strndup(line + 5, strlen(line+5)-1); ++fl_name;
-        } else if (!fl_exec && strncmp(line, "Exec=", 5) == 0) { exec_path = strndup(line + 5, strlen(line +5)-1); exec_path[strcspn(exec_path, "%")] = '\0'; ++fl_exec;
-        } else if (!fl_term && strcmp(line, "Terminal=true\n") == 0) { terminal = 1; ++fl_term;
-        } else if (!fl_hidd && strcmp(line, "Hidden=true\n") == 0) { hidden = 1; ++fl_hidd;
-        } else if (!fl_hidd && strcmp(line, "NoDisplay=true\n") == 0) { hidden = 1; ++fl_hidd; };
+        if (!app_name && strncmp(line, "Name=", 5) == 0) { app_name = strndup(line + 5, strlen(line+5)-1);
+        } else if (!hidden && (strcmp(line, "Hidden=true\n") == 0 || strcmp(line, "NoDisplay=true\n") == 0)) {++hidden; break; };
+
+        if (app_name && hidden){ break; }; // Stopping if name and hidden found
     };
 
     fclose(file);
 
-    if (app_name && exec_path && !hidden) {
-        apps[app_ctr].app_name = app_name;
-        apps[app_ctr].exec_path = exec_path;
-        apps[app_ctr].terminal = terminal;
+    if (app_name && !hidden) {
+        apps[app_ctr] = (struct App){strdup(filepath), app_name, NULL, 0};
         ++app_ctr;
-    } else { if (app_name){ free(app_name); }; if (exec_path){ free(exec_path); }; };
+    };
 }
 
 void parse_directory(const char *dirpath) {
@@ -48,7 +62,7 @@ void parse_directory(const char *dirpath) {
         if (entry->d_type == DT_REG || entry->d_type == DT_LNK) {
             char filepath[BUFFER_SIZE];
             snprintf(filepath, sizeof(filepath), "%s/%s", dirpath, entry->d_name);
-            if (strstr(filepath, ".desktop")) { parse_desktop_file(filepath); };
+            if (strstr(entry->d_name, ".desktop")) { base_parse(filepath); };
         };
     };
 
@@ -76,6 +90,11 @@ int main() {
 
     // sort case insensetive
     qsort(apps, app_ctr, sizeof(App), qsort_comp);
+    // TODO add duplicates removal
+    // a) implement hash function which turns names into indexes and overite hidden flag if duplicate? (more difficult to form list of apps)
+    // b) store everything and cleanup afte sorting? (sort by name and hidden index, so hidden apps are always first or last? )
+    // if next or first has hidden => delete both and move memory to the left 2 positions (impossible, because hidden won't be here)
+    // if next and first are identical => delete second and move memory to the left 1 position
     //for (int i = 0; i < app_ctr; ++i){ printf("%s, %s, %d\n", apps[i].app_name, apps[i].exec_path, apps[i].terminal); }; return 0; // Parsing and sorting control
 
     // Combine app names into a single string with newline separation
@@ -105,7 +124,7 @@ int main() {
     if (fgets(selected_app, sizeof(selected_app), pipe)) {
         selected_app[strcspn(selected_app, "\n")] = '\0'; // remove new line char
         for (size_t i = 0; i < app_ctr; i++) { // Find and launch the selected app
-            if (strcmp(selected_app, apps[i].app_name) == 0) { launch_app(apps[i].exec_path, apps[i].terminal); break; };
+            if (strcmp(selected_app, apps[i].app_name) == 0) { exec_parse(&apps[i]); launch_app(apps[i].exec_path, apps[i].terminal); break; };
         };
     };
 
@@ -115,4 +134,4 @@ int main() {
     for (size_t i = 0; i < app_ctr; i++) { free(apps[i].app_name); free(apps[i].exec_path); };
 
     return 0;
-}
+   }
