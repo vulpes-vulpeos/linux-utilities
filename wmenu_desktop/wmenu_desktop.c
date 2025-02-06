@@ -41,8 +41,6 @@ void base_parse(const char *filepath) {
     while (fgets(line, sizeof(line), file)) {
         if (!app_name && strncmp(line, "Name=", 5) == 0) { app_name = strndup(line + 5, strlen(line+5)-1);
         } else if (!hidden && (strcmp(line, "Hidden=true\n") == 0 || strcmp(line, "NoDisplay=true\n") == 0)) {++hidden; break; };
-
-        if (app_name && hidden){ break; }; // Stopping if name and hidden found
     };
 
     fclose(file);
@@ -91,10 +89,6 @@ int main() {
     // sort case insensetive
     qsort(apps, app_ctr, sizeof(App), qsort_comp);
     // TODO add duplicates removal
-    // a) implement hash function which turns names into indexes and overite hidden flag if duplicate? (more difficult to form list of apps)
-    // b) store everything and cleanup afte sorting? (sort by name and hidden index, so hidden apps are always first or last? )
-    // if next or first has hidden => delete both and move memory to the left 2 positions (impossible, because hidden won't be here)
-    // if next and first are identical => delete second and move memory to the left 1 position
     //for (int i = 0; i < app_ctr; ++i){ printf("%s, %s, %d\n", apps[i].app_name, apps[i].exec_path, apps[i].terminal); }; return 0; // Parsing and sorting control
 
     // Combine app names into a single string with newline separation
@@ -106,8 +100,8 @@ int main() {
     char *app_names = calloc(names_tot_len, sizeof(char));
     if (!app_names) { perror("Failed to allocate memory for app_names"); return 1; };
     for (size_t i = 0; i < app_ctr; i++) { 
-        strncat(app_names, apps[i].app_name, BUFFER_SIZE - strlen(app_names) - 1);
-        if (i < app_ctr - 1) { strncat(app_names, "\n", BUFFER_SIZE - strlen(app_names) - 1); };
+        strcat(app_names, apps[i].app_name);
+        if (i < app_ctr - 1) { strcat(app_names, "\n"); }
     };
     // Construct the wmenu command
     char *bg = "#403f3a", *fg = "#dbdbdb", *sbg = "#9c4f30", *sfg = "#dbdbdb", *pt = "Search:" , *pbg = "#9c4f30", *pfg = "#dbdbdb";
