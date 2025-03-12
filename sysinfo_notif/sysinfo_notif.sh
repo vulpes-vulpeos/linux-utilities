@@ -1,14 +1,13 @@
-# !/bin/bash
-NOTIF_ID=2346
+#!/bin/bash
 TITLE=" "
 
 # Time and date
 TIME=$(date '+%H:%M')
-CONTENT="                     <span size='26pt'><b>${TIME}</b></span>\n"
+CONTENT="<span foreground='#5b5950'>---------------------</span><span size='26pt'><b>${TIME}</b></span>\n"
 DATE=$(date '+%a, %d/%m/%Y')
-CONTENT="${CONTENT}                    <span size='11pt'>${DATE}</span>\n"
+CONTENT="${CONTENT}                          <span size='11pt'>${DATE}</span>\n"
 # Separator
-CONTENT="${CONTENT} -------------------------------------------------------------------- \n"
+CONTENT="${CONTENT} --------------------------------------------------------------------\n"
 CONTENT="${CONTENT}<span font='DejaVuSansM Nerd Font' size='10pt'><b>  CPU   TEMP   RAM     VOL   KBD</b>\n"
 
 # CPU usage percent
@@ -19,7 +18,7 @@ CPU_USAGE=$(echo "scale=0; (100 * (($TOTAL_II - $TOTAL_I) - ($IDLE_II - $IDLE_I)
 CONTENT="${CONTENT}  $(printf "%-6s" "$CPU_USAGE%")"
 
 # CPU temperature
-CPU_TEMP=$(( $(cat /sys/class/thermal/thermal_zone0/temp) / 1000 ))
+CPU_TEMP=$(( $(cat /sys/class/thermal/thermal_zone1/temp) / 1000 ))
 THRESHOLD=80
 if [ "$CPU_TEMP" -gt "$THRESHOLD" ]; then
     CONTENT="${CONTENT}$(printf "<span foreground='#e7666a'>%-8s</span>" "$CPU_TEMP°C")"
@@ -32,29 +31,31 @@ RAM_USE=$(free -h -L | awk '{print $6}')
 CONTENT="${CONTENT}$(printf "%-8s" "${RAM_USE}B")"
 
 # Volume variables
-VOLUME=$(amixer -D default get Master | awk -F"[][]" '/Left:/ { print $2 }')
-MUTE=$(amixer -D default get Master | awk -F"[][]" '/Left:/ { print $4 }')
-if [[ "$MUTE" != "on" ]]; then VOLUME="${VOLUME}(X)"; fi
-CONTENT="${CONTENT}$(printf "%-6s" "${VOLUME}")"
+CUR_VOL=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{print $2 * 100}')
+MUTE=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ | grep -q '[MUTED]' && echo "Muted" || echo "Not Muted")
+if [[ "$MUTE" != "Muted" ]]; then VOLUME="${CUR_VOL}%(X)"; fi
+CONTENT="${CONTENT}$(printf "%-6s" "${CUR_VOL}%")"
 
 # Keyboard layout
 # Input identifiers: swaymsg -t get_inputs
-KBD_LAYOUT=$(swaymsg --raw -t get_inputs | jq -r '.[] | select(.identifier == "***************") | .xkb_active_layout_name' | head -n 1)
+KBD_LAYOUT=$(swaymsg --raw -t get_inputs | jq -r '.[] | select(.identifier == "7847:24674:skyloong_GK61_Pro_DS_1.0.0") | .xkb_active_layout_name' | head -n 1)
 CONTENT="${CONTENT}${KBD_LAYOUT:0:2}</span>"
 
 # Currently playing
-if playerctl status &>/dev/null; then
-    CONTENT="${CONTENT}\n -------------------------------------------------------------------- \n"
-    CONTENT="${CONTENT}  <b>$(playerctl metadata -f "{{trunc(title,34)}}")</b>\n"
-    CONTENT="${CONTENT}  $(playerctl metadata -f "{{artist}} - {{album}}" | sed 's/\(.\{40\}\).*/\1.../')"
+if playerctl status 2>/dev/null | grep -q "Playing"; then
+    CONTENT="${CONTENT}\n --------------------------------------------------------------------\n"
+    # Get title, artist and album + protection against chars used in pango-markup
+    CONTENT="${CONTENT}  <span size='9pt'><b>$(playerctl metadata -f "{{trunc(title,34)}}" \
+    | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')</b>\n"
+    CONTENT="${CONTENT}  $(playerctl metadata -f "{{artist}} - {{album}}" \
+    | sed 's/\(.\{38\}\).*/\1.../' \
+    | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')</span>"
     # removing separator if album field is empty
     if [[ "${CONTENT:${#CONTENT} - 1}" == " " ]]; then
         CONTENT="${CONTENT:: -3}"
     fi
 fi
 
-# Additional "invisible" line
-CONTENT="${CONTENT}\n<span foreground='#5b5950'>-------</span>"
 #echo "$CONTENT"
-notify-send -t 3000 -a "cur_vol_notif" -r "$NOTIF_ID" -i noicon "$TITLE" "$CONTENT"
+notify-send -t 3000 -a "sysinfo_notif" "$TITLE" "$CONTENT"
 exit 0
