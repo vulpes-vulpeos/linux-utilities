@@ -6,7 +6,15 @@ You'll need to add keyboard identifier for keyboard layout indicator to work, or
 ![sysinfo_notif](https://github.com/vulpes-vulpeos/linux-utilities/assets/40931454/7bf524c5-9f31-4a75-bded-940a76099358)
 
 **Dependencies:**
-- dunst [notify-send] (target notification width and height = 300)
+- mako [notify-send] (target notification width and height = 300).
 - amixer (for current volume)
 - sway (for keyboard layout)
 - playerctl (for currently playing)
+
+Add this into mako config:  
+```
+# Settings for system notification
+[app-name=sysinfo_notif]  
+history=0  
+format=%b
+```
