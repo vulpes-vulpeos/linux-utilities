@@ -1,7 +1,7 @@
 # wmenu-desktop
 ![screenshoot-2024-12-12_12-00-37](https://github.com/user-attachments/assets/cbecb04f-8c80-453d-9e74-28257a2b65ee)
 
-In sway config set ```$menu``` to /path/to/dmenu_desktop/executable  
+In sway config set ```$menu``` to /path/to/wmenu_desktop/executable  
 You can change colors inside source code.
 dmenu_desktop parses this folders:  
 - ~/.local/share/applications
