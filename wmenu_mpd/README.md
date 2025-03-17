@@ -1,4 +1,4 @@
-# wmenu-desktop
+# wmenu-mpd
 
 ![screenshoot-2025-03-17_11-32-21(1)](https://github.com/user-attachments/assets/afab388e-7c03-47f4-9164-9d494a0edbe0)
 
