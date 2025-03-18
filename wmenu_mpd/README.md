@@ -12,3 +12,5 @@ wmenu_mpd parses provided mpd.conf for music_directory path. After selection in 
 **Compiling:**   
 Compile with: ```gcc /path/to/wmenu_mpd.c -o /path/to/wmenu_mpd```  
 
+**Usage:**  
+Usage example: ```wmenu_mpd ~/.config/mpd/mpd.conf```
