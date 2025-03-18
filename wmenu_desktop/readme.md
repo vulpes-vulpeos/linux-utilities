@@ -13,4 +13,4 @@ Has a noticeable startup delay.
 **C**  
 Launches instantly, compared to bash version. Do not forget to **change username** to yours in ```/home/vulpeos/.local/share/applications``` path.  
 Compile with: ```gcc /path/to/wmenu_desktop.c -o /path/to/wmenu_desktop```  
-
+Usage example: ```wmenu_desktop /usr/share/applications ~/.local/share/applications```
