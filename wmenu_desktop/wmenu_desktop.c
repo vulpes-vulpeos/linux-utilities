@@ -154,7 +154,7 @@ void count_dfiles (char *dir_path, int *dfctr){
 
 int path_usable (char *const dir_path) {
     struct stat sb;
-    if(stat(dir_path, &sb) != 0 && S_ISDIR(sb.st_mode)) { return 1; }; // Path exists and is a directory
+    if(stat(dir_path, &sb) == 0 && S_ISDIR(sb.st_mode)) { return 1; }; // Path exists and is a directory
 
     return 0;
 }
