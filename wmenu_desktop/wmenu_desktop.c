@@ -14,7 +14,7 @@
 
 #define MAX_NAME_LEN 128
 
-typedef struct DFlist { // struct with element de_ctrer and dynamic array of struct pointers
+typedef struct DFlist {
     int dentr_ctr;
     struct Dentry {
         char *df_path, *app_name, *exec_path; 
@@ -22,22 +22,28 @@ typedef struct DFlist { // struct with element de_ctrer and dynamic array of str
     } **dentries;
 } DFlist;
 
-void launch_app (DFlist *df_list, char *response){
-    // find response index
-    int app_index = -1;
-    for (int ctr = 0; ctr < df_list->dentr_ctr-1; ++ctr){
-        if (strstr(df_list->dentries[ctr]->app_name, response) && !df_list->dentries[ctr]->hid){app_index = ctr; break; }; 
+int compare_app_name(const void *a, const void *b) {
+    const char *key = (const char *)a;
+    const struct Dentry *entry = *(const struct Dentry **)b;
+    return strcasecmp(key, entry->app_name);
+}
+
+void launch_app(DFlist *dflist, char *response) {
+    struct Dentry **result = bsearch(response, dflist->dentries, dflist->dentr_ctr, sizeof(struct Dentry *), compare_app_name);
+    
+    if (!result || (*result)->hid){
+        printf("[wmenu_desktop] wmenu response \"%s\" not found in app list.\n", response);
+        return;
     };
-    if (app_index == -1) { return; }; // Do nothing if response wasn't found
 
     if (fork() == 0) {
-        if (df_list->dentries[app_index]->term) {
-            execlp("kitty", "kitty", "-e", "sh", "-c", df_list->dentries[app_index]->exec_path, NULL);
+        if ((*result)->term) {
+            execlp("kitty", "kitty", "-e", "sh", "-c", (*result)->exec_path, NULL);
         } else {
-            execlp("sh", "sh", "-c", df_list->dentries[app_index]->exec_path, NULL);
-        };
-        printf("[wmenu_desktop] Failed to launch application. Exec path: %s\n", df_list->dentries[app_index]->exec_path);
-    };
+            execlp("sh", "sh", "-c", (*result)->exec_path, NULL);
+        }
+        printf("[wmenu_desktop] Failed to launch application. Exec path: %s\n", (*result)->exec_path);
+    }
 }
 
 char *exec_comm(char *wmenu_comm){
@@ -180,14 +186,9 @@ int parse_dfile (struct Dentry *dentry){
     return 0;
 }
 
-// TODO make this simpler
-// look for last . and cmp from there?
 int filter(const struct dirent *entry) {
-    const char *ext = ".desktop";
-    size_t len = strlen(entry->d_name);
-    size_t ext_len = strlen(ext);
-
-    return len > ext_len && strcmp(entry->d_name + len - ext_len, ext) == 0;
+    const char *ext = strrchr(entry->d_name, '.');
+    return ext && strcmp(ext, ".desktop") == 0;
 }
 
 int parse_paths(char **paths, size_t num_paths, DFlist *df_list) {
@@ -230,7 +231,7 @@ int parse_paths(char **paths, size_t num_paths, DFlist *df_list) {
     return 0;
 }
 
-void usage (){
+void usage () {
     puts("Usage: wmenu_dektop <DIR>...\n");
     puts("Arguments:");
     puts("<DIR>...    One or more directories containing .desktop files.");
@@ -241,6 +242,7 @@ void usage (){
 int main (int argc, char **argv) {
     // checks
     if (argc < 2) { usage(); return 0; };
+    
     // parse provided path(s)
     DFlist df_list = {0};
     if (parse_paths(&argv[1], argc-1, &df_list)){ 
@@ -254,7 +256,7 @@ int main (int argc, char **argv) {
     for (int ctr = 0; ctr < df_list.dentr_ctr-1; ++ctr){
         process_pair(df_list.dentries[ctr], df_list.dentries[ctr+1]);
     };
-         
+    
     // form wmenu command
     char *wmenu_comm = constr_comm(&df_list);
     if (!wmenu_comm) {
