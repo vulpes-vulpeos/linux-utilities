@@ -60,12 +60,11 @@ char *exec_comm(char *wmenu_comm){
 }
 
 char* constr_comm (DFlist *df_list){
-    // counting length of all visible app names and total number of visible entries
-    int names_str_len = 0, vis_ctr = 0;
+    // counting length of all visible app names
+    int names_str_len = 0;
     for (int ctr = 0; ctr < df_list->dentr_ctr; ++ctr){
         if (!df_list->dentries[ctr]->hid) {
             names_str_len += strlen(df_list->dentries[ctr]->app_name) + 1;
-            ++vis_ctr;
         };
     };
     // combine names into one string using new line as separator
@@ -75,18 +74,17 @@ char* constr_comm (DFlist *df_list){
         return NULL;
     };
     char *pos = names_str;
+    int len = 0;
     for (int ctr = 0, add_ctr = 0; ctr < df_list->dentr_ctr; ++ctr) {
         if (!df_list->dentries[ctr]->hid) {
-            int len = strlen(df_list->dentries[ctr]->app_name);
+            len = strlen(df_list->dentries[ctr]->app_name);
             memcpy(pos, df_list->dentries[ctr]->app_name, len);
             pos += len;
-            if (add_ctr++ < vis_ctr - 1) {
-                *pos++ = '\n';
-            };
+            *pos++ = '\n';
         };
     };
-    *pos = '\0';
-     // construct full command
+    names_str[names_str_len-1] = '\0';
+    // construct full command
     char *command;
     asprintf(&command, "echo \"%s\" | wmenu -bi -N \"%s\" -n \"%s\" -S \"%s\" -s \"%s\" -p \"%s\" -M \"%s\" -m \"%s\"",
                        names_str, WM_BG, WM_FG, WM_SBG, WM_SFG, WM_PT, WM_PBG, WM_PFG);
@@ -250,7 +248,6 @@ int main (int argc, char **argv) {
     };
     // sort .desktop entries
     qsort(df_list.dentries, df_list.dentr_ctr, sizeof(struct Dentry*), qsort_comp);
-    //for (int i = 0; i < df_list.dentr_ctr; i++) { printf("%s | %s | %d\n", df_list.dentries[i]->app_name, df_list.dentries[i]->exec_path, df_list.dentries[i]->hid); };
 
     // process .desktop entries to hide duplicates 
     for (int ctr = 0; ctr < df_list.dentr_ctr-1; ++ctr){
