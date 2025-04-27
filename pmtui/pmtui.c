@@ -117,14 +117,12 @@ void free_drives(Menu_list *menu){
         free(menu->drives[i]->mount_point);
         free(menu->drives[i]);
     };
-    free(menu->drives);
+    if (menu->drives != NULL){ free(menu->drives); };
 }
 
 void get_drives(Menu_list *menu){
     // Do not leak memory on drives list update
-    if (menu->drives != NULL){
-        free_drives(menu);
-    };
+    if (menu->drives != NULL){ free_drives(menu); };
 
     struct udev *udev = udev_new();
     struct udev_enumerate *enumerate = udev_enumerate_new(udev);
@@ -141,11 +139,11 @@ void get_drives(Menu_list *menu){
         udev_device_unref(dev);
     };
     // Do nothing if no drives connected
-    if (menu->size < 1){udev_enumerate_unref(enumerate); udev_unref(udev); return; };
+    if (menu->size < 1){ menu->drives = NULL; udev_enumerate_unref(enumerate); udev_unref(udev); return; };
     // Geting list of drives
     int ctr = 0;
     char *str_ptr = NULL;
-    menu->drives = malloc(menu->size * sizeof(Drive));
+    menu->drives = calloc(menu->size, sizeof(Drive));
     udev_list_entry_foreach(dev_list_entry, devices) {
         struct udev_device *dev = udev_device_new_from_syspath(udev, udev_list_entry_get_name(dev_list_entry));
         if (valid_device(&dev)) {
