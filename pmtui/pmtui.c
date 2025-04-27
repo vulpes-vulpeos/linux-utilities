@@ -34,18 +34,15 @@ struct Term {
     int hcol;
 } typedef Term ;
 
-// ####  ####  ##### #   # ##### #####   ##### ##### #   # ##### #####
-// #   # #   #   #   #   # #     #       #       #   #   # #     #    
-// #   # ###     #   #   # ##### #####   #####   #   #   # ##### #####
-// #   # #  #    #    # #  #         #       #   #   #   # #     #    
-// ####  #   # #####   #   ##### #####   #####   #    ###  #     #    
+// █▀▄ █▀█ █ █ █ █▀▀ █▀▀
+// █▄▀ █▀▄ ▀▄▀ █ ██▄ ▄▄█
 int manage_drive(const char * devnode, const char bwin_sel){
     char *command = calloc(256,sizeof(char));
     if (bwin_sel == 'm'){sprintf(command, "udisksctl mount --no-user-interaction -b %s 2>&1", devnode);
     } else if (bwin_sel == 'u') {sprintf(command, "udisksctl unmount --no-user-interaction -b %s 2>&1", devnode);
     } else if (bwin_sel == 'p') {sprintf(command, "udisksctl power-off --no-user-interaction -b %s 2>&1", devnode);
     } else if (bwin_sel == 'e') {sprintf(command, "eject %s && sleep 0.2", devnode); };
-    
+
     FILE *fp;
     char buffer[1024];
     int error = 0;
@@ -53,7 +50,7 @@ int manage_drive(const char * devnode, const char bwin_sel){
     while (fgets(buffer, sizeof(buffer), fp) != NULL) {
         if (strstr(buffer, "not a mount") != NULL) {error = 5; };
         if (strstr(buffer, "Error") == NULL) {continue; };
-        
+
         if (strstr(buffer, "DeviceBusy") != NULL){error = 1;
         } else if (strstr(buffer, "AlreadyMounted") != NULL){error = 2;
         } else if (strstr(buffer, "drive is in use") != NULL){error = 3;
@@ -105,7 +102,7 @@ int valid_device(struct udev_device **dev){
     char line[1024];
     while (fgets(line, sizeof(line), file_ptr) != NULL) {
         if (strstr(line, id_fs_uuid)){fclose(file_ptr); return 0; };
-    };    
+    };
     fclose(file_ptr);
 
     return 1;
@@ -124,8 +121,10 @@ void free_drives(Menu_list *menu){
 }
 
 void get_drives(Menu_list *menu){
-    // Do not leak memory
-    if (menu->drives != NULL){free_drives(menu); };
+    // Do not leak memory on drives list update
+    if (menu->drives != NULL){
+        free_drives(menu);
+    };
 
     struct udev *udev = udev_new();
     struct udev_enumerate *enumerate = udev_enumerate_new(udev);
@@ -145,15 +144,22 @@ void get_drives(Menu_list *menu){
     if (menu->size < 1){udev_enumerate_unref(enumerate); udev_unref(udev); return; };
     // Geting list of drives
     int ctr = 0;
+    char *str_ptr = NULL;
     menu->drives = malloc(menu->size * sizeof(Drive));
     udev_list_entry_foreach(dev_list_entry, devices) {
         struct udev_device *dev = udev_device_new_from_syspath(udev, udev_list_entry_get_name(dev_list_entry));
         if (valid_device(&dev)) {
             menu->drives[ctr] = malloc(sizeof(Drive));
-            menu->drives[ctr]->devnode = strdup(udev_device_get_devnode(dev));
-            menu->drives[ctr]->label   = strdup(udev_device_get_property_value(dev, "ID_FS_LABEL"));
-            menu->drives[ctr]->fs      = strdup(udev_device_get_property_value(dev, "ID_FS_TYPE"));
-            menu->drives[ctr]->size    = get_human_size(dev);
+            str_ptr = (char *)udev_device_get_devnode(dev);
+            if (str_ptr != NULL){ menu->drives[ctr]->devnode = strdup(str_ptr);
+            } else { menu->drives[ctr]->devnode = strdup("<NO DEVNODE>"); };
+            str_ptr = (char *)udev_device_get_property_value(dev, "ID_FS_LABEL");
+            if (str_ptr != NULL){ menu->drives[ctr]->label = strdup(str_ptr);
+            } else { menu->drives[ctr]->label = strdup("<NO LABEL>"); };
+            str_ptr = (char *)udev_device_get_property_value(dev, "ID_FS_TYPE");
+            if (str_ptr != NULL){ menu->drives[ctr]->fs = strdup(str_ptr);
+            } else { menu->drives[ctr]->fs = strdup("<NO FS TYPE>"); };
+            menu->drives[ctr]->size = get_human_size(dev);
             menu->drives[ctr]->mount_point = get_mount_point(udev_device_get_devnode(dev));
             menu->drives[ctr]->mounted = 1;
             if (menu->drives[ctr]->mount_point == NULL){
@@ -171,11 +177,8 @@ void get_drives(Menu_list *menu){
     udev_unref(udev);
 }
 
-//  ##### #   # #####   ##### ##### #   # ##### #####
-//    #   #   #   #     #       #   #   # #     #     
-//    #   #   #   #     #####   #   #   # ###   ###  
-//    #   #   #   #         #   #   #   # #     #    
-//    #   ##### #####   #####   #    ###  #     #    
+// ▀█▀ █ █ █
+//  █  ▀▄█ █
 void err_mess(const int err_code, const Term *term){
     const char *err_strings[] = {"", "drive is busy", "already mounted", "drive is in use",
                                  "permission denied", "not mountable", "unknown error"};
@@ -258,7 +261,7 @@ void calc_menu_param(Menu_list *menu, Term *term){
 
 void print_menu(Menu_list *menu, const Term *term) {
     int start_ind = 0;
-    
+
     // Scrolling math (adding +1 in some places to compensate 0 index)
     if (menu->size > menu->max_rows){
         // Forward scrolling 
@@ -268,7 +271,7 @@ void print_menu(Menu_list *menu, const Term *term) {
         if (menu->top_sel > menu->sel && (menu->top_sel - menu->sel) < menu->max_rows &&
             (menu->top_sel+1 - menu->max_rows) >= 0 ){start_ind = menu->top_sel+1 - menu->max_rows; };
     };
-    
+
     // Move cursor to the start of the menu area and clear each line
     printf("\033[%d;%dH", term->hrow, 1);
     for (int i = start_ind, row = 0; i < ((menu->size > menu->max_rows) ? menu->max_rows+start_ind : menu->size); ++i, ++row){
@@ -282,22 +285,32 @@ void print_menu(Menu_list *menu, const Term *term) {
     };
     for(int i = 0; i < term->cols; ++i){putchar('-'); };
     printf("\n[%d/%d] keys: ", menu->sel+1, menu->size);
+    //Padding to align keys help to the right
+    int padd = term->cols - ((menu->drives[menu->sel]->mounted) ? 0 : 8) - 
+               ((menu->drives[menu->sel]->mounted) ? 10 : 0) -
+               ((menu->drives[menu->sel]->devnode[6] != 'r') ? 12 : 8) - 
+               10 - 6 - snprintf(NULL, 0, "%i", menu->sel) - 1 - snprintf(NULL, 0, "%i", menu->size);
+    //printf("%*s", padd-2, "");
     printf("%s%s%s%s%s\033[K", (menu->drives[menu->sel]->mounted) ? "" : "(\033[1mm\033[0m)ount ",
                                (menu->drives[menu->sel]->mounted) ? "(\033[1mu\033[0m)nmount " : "",
                                (menu->drives[menu->sel]->devnode[6] != 'r') ? "(\033[1mp\033[0m)ower-off " : "(\033[1me\033[0m)ject ",
                                "(\033[1mr\033[0m)efresh ", "(\033[1mq\033[0m)uit\033[0J");
 }
 
-//  #     ##### ##### #####   ##### ##### #   # ##### #####
-//  #     #   # #     #       #       #   #   # #     #     
-//  #     #   # #  ## #####   #####   #   #   # ###   ###  
-//  #     #   # #   #     #       #   #   #   # #     #    
-//  ##### ##### ##### #####   #####   #    ###  #     #    
+// █   █▀█ █▀▀ █▀▀
+// █▄▄ █▄█ █▄█ ▄▄█
 struct Logs {
     int    size;
     int    fill_ind;
     char **events; 
 } typedef Logs;
+
+void free_logs_events(Logs *logs){
+    for (int i = 0; i < logs->fill_ind; ++i){
+        free(logs->events[i]);
+    };
+    free(logs->events);
+}
 
 void print_logs(Logs *logs, const Term *term){
     printf("\033[%d;%dH\033[0J", term->hrow, 1); // Clear the menu
@@ -320,13 +333,16 @@ void init_logs(Logs *logs){
     logs->events = malloc(sizeof(char*) * 128);
 }
 
-int main() {    
+int main() {
     Menu_list *menu = calloc(1, sizeof(Menu_list));
-    menu->drives = NULL;
     get_drives(menu);
-    if (menu->size < 1){puts("Nothing to see here -_-"); return 0; };
+    if (menu->size < 1){
+        free(menu);
+        puts("Nothing to see here -_-");
+        return 0;
+    };
     menu->sel = 0;
-            
+
     Logs *logs = calloc(1, sizeof(Logs));
     init_logs(logs);
     term_mode(1); // Enable raw mode for input
@@ -336,7 +352,7 @@ int main() {
     if (term->rows < 7 || term->cols < 75){printf("Terminal window should be at least 7x75\n"); term_mode(0); return 1;};
     get_curs_pos(term);
     if (term->hrow == -1 || term->hcol == -1) {printf("Failed to get cursor position.\n"); term_mode(0); return 1; };
-    
+
     calc_menu_param(menu, term);
     print_menu(menu, term);
 
@@ -391,15 +407,21 @@ int main() {
             get_drives(menu);
             calc_menu_param(menu, term);
         // Quit
-        } else if (ch == 'q') {break; 
+        } else if (ch == 'q') {break;
         };
-        
+
         if (menu->size < 1){break;};
         print_menu(menu, term);
     };
-    
+
     print_logs(logs, term);
     term_mode(0);
+
+    free(term);
+    free_drives(menu);
+    free(menu);
+    free_logs_events(logs);
+    free(logs);
 
     return 0;
 }
