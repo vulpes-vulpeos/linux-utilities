@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#define TERM   "foot"
 #define WM_BG  "#393939" // normal background color
 #define WM_FG  "#DADADA" // normal text color
 #define WM_SBG "#834B3A" // selection background
@@ -30,7 +31,7 @@ int compare_app_name(const void *a, const void *b) {
 
 void launch_app(DFlist *dflist, char *response) {
     struct Dentry **result = bsearch(response, dflist->dentries, dflist->dentr_ctr, sizeof(struct Dentry *), compare_app_name);
-    
+
     if (!result || (*result)->hid){
         printf("[wmenu_desktop] wmenu response \"%s\" not found in app list.\n", response);
         return;
@@ -38,7 +39,7 @@ void launch_app(DFlist *dflist, char *response) {
 
     if (fork() == 0) {
         if ((*result)->term) {
-            execlp("kitty", "kitty", "-e", "sh", "-c", (*result)->exec_path, NULL);
+            execlp(TERM, TERM, "-e", "sh", "-c", (*result)->exec_path, NULL);
         } else {
             execlp("sh", "sh", "-c", (*result)->exec_path, NULL);
         }
@@ -55,7 +56,7 @@ char *exec_comm(char *wmenu_comm){
     if (fgets(selection, MAX_NAME_LEN, pipe)) { selection[strcspn(selection, "\n")] = '\0'; };
 
     pclose(pipe);
-    
+
     return selection;
 }
 
@@ -107,27 +108,33 @@ void process_pair (struct Dentry *a, struct Dentry *b){
     // do nothing if names are different
     if (strcmp(a->app_name, b->app_name) != 0) { return; };
     // get size of dir path
-    long dp_end = strchr(a->df_path, '/') - a->df_path;
+    long dp_end = strrchr(a->df_path, '/') - a->df_path;
     if (strncmp(a->df_path, b->df_path, dp_end) == 0) {
         // do nothing if same path and one is hidden
         if (a->hid || b->hid) { return;
         // set b entry to hidden if none hidden
-        } else { b->hid = 1; };
+        } else { b->hid = 1; return; };
     }; 
     int fl_ha = strncmp(a->df_path, "/home", 5);
     int fl_hb = strncmp(b->df_path, "/home", 5);
     // .desktop entries from user home directory have priority
-    if (fl_ha == 0 && a->hid && !b->hid) { ++b->hid; };
-    if (fl_hb == 0 && b->hid && !a->hid) { ++a->hid; };      
+    //if (fl_ha == 0 && a->hid && !b->hid) { ++b->hid; };
+    if (fl_ha == 0 && a->hid && !b->hid) { 
+        printf("Home path detected: %s\n", a->df_path);
+        ++b->hid; };
+    //if (fl_hb == 0 && b->hid && !a->hid) { ++a->hid; };
+    if (fl_hb == 0 && b->hid && !a->hid) { 
+        printf("Home path detected: %s\n", b->df_path);
+        ++a->hid; };
 }
 
 int qsort_comp(const void *a, const void *b) {
     struct Dentry *d1 = *(struct Dentry **)a;
     struct Dentry *d2 = *(struct Dentry **)b;
-    
+
     int cmp = strcasecmp(d1->app_name, d2->app_name);
     if (cmp != 0) { return cmp; };
-    
+
     return d2->hid - d1->hid; // prioritize hid = 1 over hid = 0
 }
 
@@ -161,7 +168,7 @@ int parse_dfile (struct Dentry *dentry){
         } else if (!dentry->hid && (!strcmp(line, "Hidden=true") || !strcmp(line, "NoDisplay=true"))) {
             dentry->hid = 1;
         };
-        
+
         // In case of hidden entry we care only about app name
         if (fl_an && dentry->hid) {
             break;
@@ -215,7 +222,7 @@ int parse_paths(char **paths, size_t num_paths, DFlist *df_list) {
             }
             // fill full path to .desktop entry
             asprintf(&df_list->dentries[df_list->dentr_ctr]->df_path, "%s/%s", paths[i], de_list[j]->d_name);
-            // fil app name, execution path, hidden and terminal flags
+            // fill app name, execution path, hidden and terminal flags
             if (parse_dfile(df_list->dentries[df_list->dentr_ctr])) {
                 return 1;
             };
@@ -240,10 +247,9 @@ void usage () {
 int main (int argc, char **argv) {
     // checks
     if (argc < 2) { usage(); return 0; };
-    
     // parse provided path(s)
     DFlist df_list = {0};
-    if (parse_paths(&argv[1], argc-1, &df_list)){ 
+    if (parse_paths(&argv[1], argc-1, &df_list)){
         return 0;
     };
     // sort .desktop entries
@@ -253,18 +259,15 @@ int main (int argc, char **argv) {
     for (int ctr = 0; ctr < df_list.dentr_ctr-1; ++ctr){
         process_pair(df_list.dentries[ctr], df_list.dentries[ctr+1]);
     };
-    
     // form wmenu command
     char *wmenu_comm = constr_comm(&df_list);
     if (!wmenu_comm) {
         free_df_list(&df_list);
         return 0;
     };
-    
     // execute wmenu command
     char *response = exec_comm(wmenu_comm);
     free(wmenu_comm);
-
     // launch app
     if (strlen(response) > 0){
         launch_app(&df_list, response);
