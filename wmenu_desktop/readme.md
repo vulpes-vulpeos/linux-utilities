@@ -8,9 +8,9 @@ dmenu_desktop parses this folders:
 - /usr/share/applications
 
 **bash**  
-Has a noticeable startup delay.
+Has a noticeable startup delay. Don't forget to **change TERMINAL variable** if you're using a terminal other than Kitty.
 
 **C**  
-Launches instantly compared to the Bash version. Don't forget to **set TERM** if you're using a terminal other than foot.  
+Launches instantly compared to the Bash version. Don't forget to **change TERM define** if you're using a terminal other than Foot.  
 Compile with: ```gcc /path/to/wmenu_desktop.c -o /path/to/wmenu_desktop```  
 Usage example: ```wmenu_desktop /usr/share/applications ~/.local/share/applications```
