@@ -11,6 +11,6 @@ dmenu_desktop parses this folders:
 Has a noticeable startup delay.
 
 **C**  
-Launches instantly, compared to bash version. Do not forget to **change username** to yours in ```/home/vulpeos/.local/share/applications``` path.  
+Launches instantly compared to the Bash version. Don't forget to **set TERM** if you're using a terminal other than foot.  
 Compile with: ```gcc /path/to/wmenu_desktop.c -o /path/to/wmenu_desktop```  
 Usage example: ```wmenu_desktop /usr/share/applications ~/.local/share/applications```
