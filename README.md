@@ -23,3 +23,9 @@ A simple bash script and c app which get list of apps formed from .desktop files
 **wmenu_mpd**  
 A simple c app which get list of music directories in mpd music directory and passes it to wmenu. After selection in wmenu it executes:  
 `mpc -q stop -> mpc -q clear -> mpc -q add *selection* -> mpc -q play`
+
+**i3blocks**  
+CPU, RAM, network, alsa volume, keyboard layout (SwayWM) blocks for i3blocks written in C.  
+
+**dot_clean**  
+Utility to remove macOS junk files from provided path. Read it's readme before use.
