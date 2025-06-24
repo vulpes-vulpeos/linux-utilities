@@ -64,5 +64,6 @@ int main() {
 
     printf("󰘳  %.2s\n", act_lay_ptr);
 
+    free(reply);
     return 0;
 }
