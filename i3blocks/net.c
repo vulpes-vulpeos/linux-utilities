@@ -85,11 +85,11 @@ int is_online() {
 }
 
 int main(){
-    //if (!is_online()){ return strdup("Offline"); };
     FILE *fp = fopen("/proc/net/route", "r");
     if (!fp) { puts("N/A"); return 1; };
 
     char line[256];
+    int  no_route = 1;
     while (fgets(line, sizeof(line), fp)) {
         char iface[IFNAMSIZ]; // replace with 16 to remove net/if.h?
         unsigned long dest, gateway;
@@ -97,12 +97,13 @@ int main(){
 
         if (sscanf(line, "%s %lx %lx %X", iface, &dest, &gateway, &flags) == 4) {
             if (dest == 0) { // 0.0.0.0 means default route
-                if (strcmp(iface, "lo") == 0) { puts("󰅛  Offline"); break; };
+                if (strcmp(iface, "lo") == 0) { break; };
+                no_route = 0;
                 int online_fl = is_online();
                 char path[256];
                 snprintf(path, sizeof(path), "/sys/class/net/%s/wireless", iface);
                 // wireless
-                if(access(path, F_OK) == 0) { 
+                if(access(path, F_OK) == 0) {
                     char* ssid = get_ssid(iface);
                     //printf("%s (%d%%) [.%d]", ssid, get_sig_perc(iface), get_loc_ip_lo(iface));
                     printf("%s  %s (%d%%)\n",(online_fl) ? "󰖩" : "󱚵",  ssid, get_sig_perc(iface));
@@ -115,6 +116,10 @@ int main(){
                 };
             };
         };
+    };
+
+    if (no_route) {
+        puts("󰅛  Offline");
     };
 
     fclose(fp);
