@@ -135,6 +135,7 @@ void print_pretty_str(const char *in_str, int style){
             case 2:  printf("%s ", g_style2[row][col]); break;
             case 3:  printf("%s ", g_style3[row][col]); break;
             case 4:  printf("%s ", g_style4[row][col]); break;
+            case 5:  printf("%s ", g_style5[row][col]); break;
             case 1: default: printf("%s ", g_style1[row][col]); break;
         };
     };
@@ -148,6 +149,7 @@ void print_pretty_str(const char *in_str, int style){
             case 2:  printf("%s ", g_style2[row+1][col]); break;
             case 3:  printf("%s ", g_style3[row+1][col]); break;
             case 4:  printf("%s ", g_style4[row+1][col]); break;
+            case 5:  printf("%s ", g_style5[row+1][col]); break;
             case 1: default: printf("%s ", g_style1[row+1][col]); break;
         };
     };
@@ -164,6 +166,8 @@ void usage(){
     print_pretty_str("hello, world!", 3);
     puts("\nStyle 4 (2x2):");
     print_pretty_str("hello, world!", 4);
+    puts("\nStyle 5 (3x2):");
+    print_pretty_str("hello, world!", 5);
 };
 
 int main (int argc, const char** argv){
@@ -181,7 +185,8 @@ int main (int argc, const char** argv){
                if (strcmp(argv[str_ind], "1") == 0) { style = 1; ++str_ind;
         } else if (strcmp(argv[str_ind], "2") == 0) { style = 2; ++str_ind;
         } else if (strcmp(argv[str_ind], "3") == 0) { style = 3; ++str_ind;
-        } else if (strcmp(argv[str_ind], "4") == 0) { style = 4; ++str_ind; };
+        } else if (strcmp(argv[str_ind], "4") == 0) { style = 4; ++str_ind; 
+        } else if (strcmp(argv[str_ind], "5") == 0) { style = 5; ++str_ind; };
     };
 
     for (; str_ind < argc; ++str_ind){
