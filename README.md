@@ -32,3 +32,11 @@ Utility to remove macOS junk files from provided path. Read it's readme before u
 
 **strblk**  
 Prints provided text in several styles.
+
+**dmenu_desktop**  
+A simple c utility which get list of apps formed from .desktop files and passes it to dmenu. After selection it executes selected app.  
+Supports multiple selections with ctrl+return.
+
+**dmenu_mpd**  
+A simple c utility which get list of music directories in mpd music directory and passes it to dmenu. After selection in dmenu it executes:  
+`mpc -q stop -> mpc -q clear -> mpc -q add *selection* -> mpc -q play`. Supports multiple selections with ctrl+return.
