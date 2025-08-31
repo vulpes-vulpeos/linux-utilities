@@ -38,26 +38,29 @@ void launch_app(DFlist *dflist, char *response) {
     };
 
     if (fork() == 0) {
-        if ((*result)->term) {
-            execlp(TERM, TERM, "-e", "sh", "-c", (*result)->exec_path, NULL);
-        } else {
-            execlp("sh", "sh", "-c", (*result)->exec_path, NULL);
-        }
+        if ((*result)->term) { execlp(TERM, TERM, "-e", "sh", "-c", (*result)->exec_path, NULL);
+        } else { execlp("sh", "sh", "-c", (*result)->exec_path, NULL); };
         printf("[wmenu_desktop] Failed to launch application. Exec path: %s\n", (*result)->exec_path);
-    }
+    };
 }
 
-char *exec_comm(char *wmenu_comm){
+void exec_comm(char *wmenu_comm, char ***sel_apps, unsigned long *sel_apps_num){
     // Open wmenu, read and execute selected app
     FILE *pipe = popen(wmenu_comm, "r");
-    if (!pipe) { perror("[wmenu_desktop] Failed to open wmenu pipe"); exit(1); };
+    if (!pipe) { perror("[wmenu_desktop] Failed to open wmenu pipe"); return; };
 
-    char *selection = calloc(MAX_NAME_LEN + 1, sizeof(char)); 
-    if (fgets(selection, MAX_NAME_LEN, pipe)) { selection[strcspn(selection, "\n")] = '\0'; };
+    char buffer[1024], **tptr;
+    while (fgets(buffer, sizeof(buffer), pipe)) {
+        buffer[strcspn(buffer, "\n")] = '\0';
+        tptr = realloc(*sel_apps, (*sel_apps_num + 1) * sizeof(char *));
+        if (!tptr) { perror("realloc failed"); break; };
+        *sel_apps = tptr;
+        (*sel_apps)[*sel_apps_num] = strdup(buffer);
+        if (!(*sel_apps)[*sel_apps_num]) { perror("strdup failed"); break; };
+        ++(*sel_apps_num);
+    };
 
     pclose(pipe);
-
-    return selection;
 }
 
 char* constr_comm (DFlist *df_list){
@@ -140,10 +143,7 @@ int qsort_comp(const void *a, const void *b) {
 
 int parse_dfile (struct Dentry *dentry){
     FILE *file = fopen(dentry->df_path, "r");
-    if (!file){
-        fprintf(stderr, "[wmenu_desktop] ERROR: %s: ", dentry->df_path); perror("");
-        return 1;
-    };
+    if (!file){ fprintf(stderr, "[wmenu_desktop] ERROR: %s: ", dentry->df_path); perror(""); return 1; };
 
     char line[1024]; 
     int fl_an = 0, fl_ep = 0, len = 0;
@@ -201,31 +201,19 @@ int parse_paths(char **paths, size_t num_paths, DFlist *df_list) {
         // get dirent list of .desktop files
         struct dirent **de_list;
         int de_ctr = scandir(paths[i], &de_list, filter, NULL);
-        if (de_ctr < 0) {
-            fprintf(stderr, "[wmenu_desktop] ERROR: %s: ", paths[i]); perror("");
-            return 1;
-        } else if (de_ctr == 0) {
-            continue;
-        };
+        if (de_ctr < 0) { fprintf(stderr, "[wmenu_desktop] ERROR: %s: ", paths[i]); perror(""); return 1;
+        } else if (de_ctr == 0) { continue; };
         // resize dentries array to fit new entries
         df_list->dentries= realloc(df_list->dentries, (df_list->dentr_ctr + de_ctr) * sizeof(struct Dentry*));
-        if (!df_list->dentries) { 
-            perror("[wmenu_desktop] ERROR: realloc: ");
-            return 1;
-        }
+        if (!df_list->dentries) { perror("[wmenu_desktop] ERROR: realloc: "); return 1; };
         // fill .desktop entries data
         for (int j = 0; j < de_ctr; ++j) {
             df_list->dentries[df_list->dentr_ctr] = calloc(1, sizeof(struct Dentry));
-            if (!df_list->dentries[df_list->dentr_ctr]) {
-                perror("[wmenu_desktop] ERROR: calloc: ");
-                return 1;
-            }
+            if (!df_list->dentries[df_list->dentr_ctr]) { perror("[wmenu_desktop] ERROR: calloc: "); return 1; };
             // fill full path to .desktop entry
             asprintf(&df_list->dentries[df_list->dentr_ctr]->df_path, "%s/%s", paths[i], de_list[j]->d_name);
             // fill app name, execution path, hidden and terminal flags
-            if (parse_dfile(df_list->dentries[df_list->dentr_ctr])) {
-                return 1;
-            };
+            if (parse_dfile(df_list->dentries[df_list->dentr_ctr])) { return 1; };
 
             ++df_list->dentr_ctr;
             free(de_list[j]);
@@ -266,14 +254,19 @@ int main (int argc, char **argv) {
         return 0;
     };
     // execute wmenu command
-    char *response = exec_comm(wmenu_comm);
+    char **sel_apps = NULL;
+    unsigned long sel_apps_num = 0;
+    exec_comm(wmenu_comm, &sel_apps, &sel_apps_num);
     free(wmenu_comm);
-    // launch app
-    if (strlen(response) > 0){
-        launch_app(&df_list, response);
+    // launch apps
+    if (sel_apps_num > 0){
+        for (int i = 0; i < sel_apps_num; ++i){
+            launch_app(&df_list, sel_apps[i]);
+            free(sel_apps[i]);
+        };
+        free(sel_apps);
     };
 
-    free(response);
     free_df_list(&df_list);
 
     return 0;
