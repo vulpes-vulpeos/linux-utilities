@@ -3,7 +3,7 @@ Script showing notification with system info. Usefull when running fullscreen ap
 
 ## C version
 
-<img width="307" height="111" alt="screenshot-2025-08-31-17_04_58" src="https://github.com/user-attachments/assets/e25eac37-0d13-4902-9691-51faab0050d8" />
+<img width="307" height="111" alt="screenshot-2025-08-31-17_04_58" src="https://github.com/user-attachments/assets/7253684a-070c-4648-b983-c7ea418b2dfb" />
 
 **Dependencies:**
 - dunst [notify-send] (target notification width and height = 300)
@@ -40,5 +40,3 @@ Add this into mako config:
 history=0  
 format=%b
 ``` 
-
-
