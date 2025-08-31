@@ -6,20 +6,25 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-char *exec_comm(char *wmenu_comm, int *longest_name){
+
+void exec_comm(char *wmenu_comm, char ***sel_dirs, unsigned long *sel_dirs_num){
     // Open wmenu, read and execute selected app
     FILE *pipe = popen(wmenu_comm, "r");
-    if (!pipe) { perror("Failed to open wmenu pipe"); exit(1); };
+    if (!pipe) { perror("Failed to open wmenu pipe"); return; };
 
-    char *sel_dir = calloc(*longest_name + 1, sizeof(char)); 
-    if (fgets(sel_dir, *longest_name+1, pipe)) {
-        sel_dir[strcspn(sel_dir, "\n")] = '\0'; // remove new line char
+    char buffer[1024], **tptr;
+    while (fgets(buffer, sizeof(buffer), pipe)) {
+        buffer[strcspn(buffer, "\n")] = '\0';
+        tptr = realloc(*sel_dirs, (*sel_dirs_num + 1) * sizeof(char *));
+        if (!tptr) { perror("realloc failed"); break; };
+        *sel_dirs = tptr;
+        (*sel_dirs)[*sel_dirs_num] = strdup(buffer);
+        if (!(*sel_dirs)[*sel_dirs_num]) { perror("strdup failed"); break; };
+        ++(*sel_dirs_num);
     };
-
     pclose(pipe);
-    
-    return sel_dir;
 }
+
 
 char* constr_comm(char **dir_list, int *const dir_num, int *longest_name, int *const path_skip){
     // calculate total length of dir names + new line chars
@@ -125,7 +130,7 @@ void usage(){
 };
 
 int main(int argc, char **argv){
-    // checks    
+    // checks
     if (argc < 2 || argc > 2) { usage(); return 1;};
     struct stat sb;
     if(stat(argv[1], &sb) != 0 || S_ISDIR(sb.st_mode)) { printf("ERROR: Path %s doesn't exist or is a folder.\n", argv[1]); return 1; };
@@ -137,7 +142,7 @@ int main(int argc, char **argv){
     // count folders and subfolders in music directory
     int dir_num = dir_count(mus_dir) ; 
     if (!dir_num) {printf("No folders to parse\n"); free(mus_dir); return 1; };
-    
+
     // copy folders names into array 
     char **dir_list = malloc(dir_num * sizeof(char*));
     int ctr = 0;
@@ -146,32 +151,36 @@ int main(int argc, char **argv){
     // sort alphabeticaly case insensetive
     qsort(dir_list, dir_num, sizeof(char*), qsort_comp);
     //int cut_start = strlen(mus_dir) +1; for (int ctr = 0; ctr < dir_num; ++ctr){printf("%s\n", (dir_list[ctr]) ? dir_list[ctr]+cut_start : "NULL"); };
-    
+
     // construct wmenu command
     int longest_name = 0, path_skip = strlen(mus_dir)+1;
     char *wmenu_comm = constr_comm(dir_list, &dir_num, &longest_name, &path_skip);
 
     // open wmenu, read response
-    char *response = exec_comm(wmenu_comm, &longest_name);
+    char **sel_dirs = NULL;
+    unsigned long sel_dirs_num = 0;
+    exec_comm(wmenu_comm, &sel_dirs, &sel_dirs_num);
 
-    free(wmenu_comm); 
-    free(mus_dir); 
+    free(wmenu_comm);
+    free(mus_dir);
     for (int ctr = 0; ctr < dir_num; ++ctr){free(dir_list[ctr]); };
     free(dir_list);
 
     // run mpc commands
-    if (strlen(response) > 0) {
+    if (sel_dirs_num > 0) {
         if (fork() == 0) { execlp("mpc", "mpc", "-q", "stop", (char *) NULL); _exit(1); };
-        wait(NULL); 
+        wait(NULL);
         if (fork() == 0) { execlp("mpc", "mpc", "-q", "clear", (char *) NULL); _exit(1); };
         wait(NULL);
-        if (fork() == 0) { execlp("mpc", "mpc", "-q", "--wait", "add", response, (char *) NULL); _exit(1); };
-        wait(NULL); 
+        for (int i = 0; i < sel_dirs_num; ++i){
+            if (fork() == 0) { execlp("mpc", "mpc", "-q", "--wait", "add", sel_dirs[i], (char *) NULL); _exit(1); };
+            wait(NULL);
+            free(sel_dirs[i]);
+        };
+        free(sel_dirs);
         if (fork() == 0) { execlp("mpc", "mpc", "-q", "play", (char *) NULL); _exit(1); };
         wait(NULL);
     };
-    
-    free(response);
-    
+
     return 0;
 }
