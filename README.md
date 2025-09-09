@@ -34,4 +34,4 @@ Bash script showing notification with system info. Usefull when running fullscre
 `mpc -q stop -> mpc -q clear -> mpc -q add *selection* -> mpc -q play`. Supports multiple selections with ctrl+return.  
 
 **XKB Layout Switcher**  
-Minimal cli keyboard layout switcher for X11.
+Minimal cli keyboard layout switcher for X11. Also there is layouts group switcher for X11 (us,ru <-> us,ua).  
