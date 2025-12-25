@@ -121,14 +121,8 @@ void process_pair (struct Dentry *a, struct Dentry *b){
     int fl_ha = strncmp(a->df_path, "/home", 5);
     int fl_hb = strncmp(b->df_path, "/home", 5);
     // .desktop entries from user home directory have priority
-    //if (fl_ha == 0 && a->hid && !b->hid) { ++b->hid; };
-    if (fl_ha == 0 && a->hid && !b->hid) { 
-        printf("Home path detected: %s\n", a->df_path);
-        ++b->hid; };
-    //if (fl_hb == 0 && b->hid && !a->hid) { ++a->hid; };
-    if (fl_hb == 0 && b->hid && !a->hid) { 
-        printf("Home path detected: %s\n", b->df_path);
-        ++a->hid; };
+    if (fl_ha == 0) { b->hid = 1; };
+    if (fl_hb == 0) { a->hid = 1; };
 }
 
 int qsort_comp(const void *a, const void *b) {
@@ -137,8 +131,14 @@ int qsort_comp(const void *a, const void *b) {
 
     int cmp = strcasecmp(d1->app_name, d2->app_name);
     if (cmp != 0) { return cmp; };
+    
+    cmp = d2->hid - d1->hid; // prioritize hid = 1 over hid = 0
+    if (cmp == 0) { // prioritize located in home folder
+        cmp = ((strncmp(d2->df_path, "/home", 5) == 0) ? 1 : 0) -
+              ((strncmp(d1->df_path, "/home", 5) == 0) ? 1 : 0);
+    };
 
-    return d2->hid - d1->hid; // prioritize hid = 1 over hid = 0
+    return cmp;
 }
 
 int parse_dfile (struct Dentry *dentry){
