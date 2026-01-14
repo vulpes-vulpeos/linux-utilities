@@ -13,6 +13,9 @@ Prints out notifications from [dunst](https://github.com/dunst-project/dunst) hi
 **frank**  
 Yet another snake game nobody needs.
 
+**gbtetui**  
+Basic TUI gameboy tile editor.  
+
 **i3blocks/dwmblocks**  
 CPU, RAM, network, alsa volume, keyboard layout (SwayWM,Xorg), mpd blocks for i3blocks/dwmblocks written in C.  
 
