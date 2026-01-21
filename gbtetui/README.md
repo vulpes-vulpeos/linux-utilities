@@ -1,13 +1,14 @@
 # Gameboy tile editor TUI
 Basic TUI gameboy tile editor.
 
-<img width="857" height="525" alt="screenshot-20260114-110046" src="https://github.com/user-attachments/assets/84da47cd-ae76-428f-99a6-b0a36f05a1b7" />
+<img width="860" height="526" alt="screenshot-20260121-154830" src="https://github.com/user-attachments/assets/c90d6883-8d7e-4925-81bb-10c41d34b7f4" />
 
 **Keybindings:** 
 - j/k/i/l and arrow keys - move cursor.
-- J/L - previous/next tile.
+- J/K/I/L - previous/upper/lower/next tile.
 - z/x/c/v - fill "pixel" with 0/1/2/3 color.
 - Z/X/C/V - fill tile with 0/1/2/3 color.
+- -/+ - remove/add line.
 - Y - copy to system clipboard.
 - Ctrl-v - paste from system clipboard.
 - q - exit.
@@ -16,8 +17,7 @@ Basic TUI gameboy tile editor.
 - MAX_TILES - set maximum number of tiles in row.
 
 **TODO:**
-- Add more rows.
-- Receive color palette as arguments.
+- (?) Receive color palette as arguments.
 
 **Dependencies:**
 - ncurses library
