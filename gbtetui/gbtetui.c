@@ -8,11 +8,14 @@
 #define MAX_TILES 100
 #define KEY_ESC 27
 
-int tile_storage[MAX_TILES][64];
-int cur_pos[2];
-int cur_tile_index = 1;
-int sb_cp = 4;
-WINDOW *cur_tile;
+#define CUR_TILE_INDEX  (cur_pos[2] * 64 * MAX_TILES + cur_pos[3] * 64)
+#define CUR_PIXEL_INDEX (cur_pos[2] * 64 * MAX_TILES + cur_pos[3] * 64 + cur_pos[0] * 8 + cur_pos[1])
+#define DT_TILE_INDEX (line_index * 64 * MAX_TILES) + (tile_index * 64) + (i*8+(j/2))
+
+int *tile_storage;
+int cur_pos[4]; // row, col, line, tile
+int ttl_lines = 1;
+int sb_cp = 4;  // color pair index for statusbar
 
 void hextile_to_colors(const char hex_str[33]) {
     int ctr = 0;
@@ -32,18 +35,18 @@ void hextile_to_colors(const char hex_str[33]) {
         };
 
         // Pixels to colors
-        for (int bit = 7; bit >= 0; bit--) { tile_storage[cur_tile_index][ctr++] = (((hi >> bit) & 1) << 1) | ((lo >> bit) & 1); };
+        for (int bit = 7; bit >= 0; bit--) { tile_storage[cur_pos[2] * MAX_TILES * 64 + cur_pos[3] * 64 + ctr++] = (((hi >> bit) & 1) << 1) | ((lo >> bit) & 1); };
     };
 }
 
 void tile_to_hex(char *tile_hex){
-        int pos = 0;
+    int pos = 0;
 
     for (int y = 0; y < 8; ++y) {
         unsigned char lo = 0, hi = 0;
 
         for (int x = 0; x < 8; ++x) {
-            unsigned char v = tile_storage[cur_tile_index][y * 8 + x] & 0x03;
+            unsigned char v = tile_storage[cur_pos[2] * MAX_TILES * 64 + cur_pos[3] * 64 + (y * 8 + x)] & 0x03;
             lo |= (v & 1) << (7 - x);        // bit 0
             hi |= ((v >> 1) & 1) << (7 - x); // bit 1
         };
@@ -65,15 +68,20 @@ static void do_sysclip_yank() {
     pclose(fp);
 }
 
-void draw_tile (WINDOW *window, int row, int col, int tile_index){
-    int  draw_cursor = 0;
+void draw_tile (WINDOW *window, int row, int col, int line_index, int tile_index){
+    // draw tile content
+    int  draw_cursor = 0, is_sel = 0;
     for (int i = 0; i < 8; ++i) { for (int j = 0; j < 16; j+=2) {
-        draw_cursor = (cur_pos[0] == i && cur_pos[1] == (j/2) && tile_index == cur_tile_index);
-        wattron(window, COLOR_PAIR(tile_storage[tile_index][i*8+(j/2)]));
+        draw_cursor = (cur_pos[2] == line_index && cur_pos[0] == i && cur_pos[1] == (j/2) && tile_index == cur_pos[3]);
+        wattron(window, COLOR_PAIR(tile_storage[DT_TILE_INDEX]));
         mvwprintw(window, row+i, col+j,"%s", (draw_cursor) ? "[]" : "  ");
-        wattroff(window, COLOR_PAIR(tile_storage[tile_index][i*8+(j/2)]));
+        wattroff(window, COLOR_PAIR(tile_storage[DT_TILE_INDEX]));
     }; };
-    if (tile_index != cur_tile_index) { mvwprintw(window, row+8, col,"%03d", tile_index); };
+    // draw bottom separator
+    is_sel = (cur_pos[2] == line_index && tile_index == cur_pos[3]);
+    wattron(window, COLOR_PAIR((is_sel) ? 8: 7));
+    mvwprintw(window, row+8, col,"%d:%03d           ", line_index+1, tile_index);
+    wattroff(window, COLOR_PAIR((is_sel) ? 8: 7));
 }
 
 void draw_status_bar() {
@@ -81,7 +89,7 @@ void draw_status_bar() {
     tile_to_hex(tile_hex);
 
     wattron(stdscr, COLOR_PAIR(sb_cp));
-    mvwprintw(stdscr, LINES-2, 0,"%-*s[%d,%d] [%0.3d] ", COLS-12, tile_hex, cur_pos[0], cur_pos[1], cur_tile_index);
+    mvwprintw(stdscr, LINES-2, 0,"%-*s[%d,%d] [%d:%0.3d] ", COLS-14, tile_hex, cur_pos[0], cur_pos[1], cur_pos[2]+1, cur_pos[3]);
     wattroff(stdscr, COLOR_PAIR(sb_cp));
 }
 
@@ -113,23 +121,27 @@ void ncurses_init() {
     init_pair(4, COLOR_BLACK, COLOR_CYAN);
     init_pair(5, COLOR_BLACK, COLOR_YELLOW);
     init_pair(6, COLOR_BLACK, COLOR_MAGENTA);
-    init_pair(7, COLOR_BLACK, COLOR_RED);
+    init_pair(7, COLOR_WHITE, 8);
+    init_pair(8, COLOR_BLACK, COLOR_WHITE);
 
     wbkgd(stdscr, COLOR_PAIR(0));
 }
 
 void refresh_screen () {
-    draw_status_bar();
-    draw_tile(stdscr, 3, 1, cur_tile_index-1);
-    int nx_tiles_ttl = (COLS - 35)/16;
-    for (int i = 0; i < nx_tiles_ttl; ++i) {
-        if (cur_tile_index+i+1 < MAX_TILES) { draw_tile(stdscr, 3, 35+(16*i), cur_tile_index+i+1);
-        } else { draw_tile(stdscr, 3, 35+(16*i), 0); };
+    draw_color_palette();
+    clrtobot();
+
+    int side_tiles_num = (COLS-18)/16/2;
+    for (int line_ind = 0; line_ind < ttl_lines; ++line_ind) {
+        int start_col = 1, start_row = 2 + (line_ind * 9);
+        for (int tile_ind = cur_pos[3] - side_tiles_num; tile_ind < cur_pos[3]+side_tiles_num+1; ++tile_ind) {
+            if (tile_ind > 0 && tile_ind < MAX_TILES) { draw_tile(stdscr, start_row, start_col, line_ind, tile_ind);
+            } else { draw_tile(stdscr, start_row, start_col, line_ind, 0); };
+            start_col += 16;
+        };
     };
+    draw_status_bar();
     wrefresh(stdscr);
-    box(cur_tile, 0 , 0);
-    draw_tile(cur_tile, 1, 1, cur_tile_index);
-    wrefresh(cur_tile);
 }
 
 static inline int is_hex_char(int ch) {
@@ -138,18 +150,12 @@ static inline int is_hex_char(int ch) {
 
 int main (int argc, char *argv[]) {
     ncurses_init();
-    if (LINES < 15 && COLS < 52) { puts("\033[?2004l"); endwin(); puts("Terminal window should be at least 15x52."); return 0; };
+    if (LINES < 15 || COLS < 50) { puts("\033[?2004l"); endwin(); puts("Terminal window should be at least 15x52."); return 0; };
 
-    memset(tile_storage, 0, MAX_TILES*64*sizeof(int)); // fill all tiles with 0 color
+    tile_storage = calloc(ttl_lines*MAX_TILES*64, sizeof(*tile_storage));
+    cur_pos[0] = 0; cur_pos[1] = 0; cur_pos[2] = 0; cur_pos[3] = 1;
 
-    draw_color_palette();
-                    // h, w, row, col
-    cur_tile = newwin(10, 18, 2, 17);
-    wbkgd(cur_tile, COLOR_PAIR(0));
     refresh_screen();
-
-    //wrefresh(stdscr);
-    //wrefresh(cur_tile);
 
     int ch = 0, running = 1, pasting = 0, pb_len = 0;
     char paste_buff[42] = {0};
@@ -195,26 +201,46 @@ int main (int argc, char *argv[]) {
             case 'l':
             case KEY_RIGHT: // move cursor right
                 if (cur_pos[1]+1 < 8) { ++cur_pos[1]; refresh_screen(); }; break;
+            case 'I': // switch to upper tile
+                if (cur_pos[2]-1 >= 0) { --cur_pos[2]; cur_pos[0] = 7; refresh_screen(); }; break;
+            case 'K': // switch to lower tile
+                if (cur_pos[2]+1 < ttl_lines) { ++cur_pos[2]; cur_pos[0] = 0; refresh_screen(); }; break;
             case 'J': // switch to prev tile
-                if (cur_tile_index-1 > 0) { --cur_tile_index; refresh_screen(); }; break;
+                if (cur_pos[3]-1 > 0) { --cur_pos[3]; cur_pos[1] = 7; refresh_screen(); }; break;
             case 'L': // switch to next tile
-                if (cur_tile_index+1 < MAX_TILES) { ++cur_tile_index; refresh_screen(); }; break;
+                if (cur_pos[3]+1 < MAX_TILES) { ++cur_pos[3]; cur_pos[1] = 0; refresh_screen(); }; break;
             case 'z': // fill pixel with color 0
-                tile_storage[cur_tile_index][cur_pos[0]*8+cur_pos[1]] = 0; refresh_screen(); break;
+                tile_storage[CUR_PIXEL_INDEX] = 0; refresh_screen(); break;
             case 'x': // fill pixel with color 1
-                tile_storage[cur_tile_index][cur_pos[0]*8+cur_pos[1]] = 1; refresh_screen(); break;
+                tile_storage[CUR_PIXEL_INDEX] = 1; refresh_screen(); break;
             case 'c': // fill pixel with color 2
-                tile_storage[cur_tile_index][cur_pos[0]*8+cur_pos[1]] = 2; refresh_screen(); break;
+                tile_storage[CUR_PIXEL_INDEX] = 2; refresh_screen(); break;
             case 'v': // fill pixel with color 3
-                tile_storage[cur_tile_index][cur_pos[0]*8+cur_pos[1]] = 3; refresh_screen(); break;
+                tile_storage[CUR_PIXEL_INDEX] = 3; refresh_screen(); break;
             case 'Z': // fill tile with color 0
-                memset(tile_storage[cur_tile_index], 0, 64*sizeof(int)); refresh_screen(); break;
+                memset(&tile_storage[CUR_TILE_INDEX], 0, 64*sizeof(int)); refresh_screen(); break;
             case 'X': // fill tile with color 1
-                memset(tile_storage[cur_tile_index], 1, 64*sizeof(int)); refresh_screen(); break;
+                memset(&tile_storage[CUR_TILE_INDEX], 1, 64*sizeof(int)); refresh_screen(); break;
             case 'C': // fill tile with color 2
-                memset(tile_storage[cur_tile_index], 2, 64*sizeof(int)); refresh_screen(); break;
+                memset(&tile_storage[CUR_TILE_INDEX], 2, 64*sizeof(int)); refresh_screen(); break;
             case 'V': // fill tile with color 3
-                memset(tile_storage[cur_tile_index], 3, 64*sizeof(int)); refresh_screen(); break;
+                memset(&tile_storage[CUR_TILE_INDEX], 3, 64*sizeof(int)); refresh_screen(); break;
+            case '-': { // decrease number of tile lines
+                if (ttl_lines-1 == 0) { break; };
+                if (cur_pos[2] == ttl_lines-1 && cur_pos[2]-1 >= 0) { --cur_pos[2]; };
+                --ttl_lines;
+                refresh_screen();
+                break; };
+            case '+': { // increase number of tile lines
+                if (LINES-4-((ttl_lines+1)*8) < 0) { break; };
+                ++ttl_lines;
+                ++cur_pos[2];
+                int *tmp_tile_storage = realloc(tile_storage, ttl_lines*MAX_TILES*64*sizeof(*tile_storage));
+                if (tmp_tile_storage == NULL) { break; }; // TODO: print allocation error under status bar
+                tile_storage = tmp_tile_storage;
+                memset(&tile_storage[(ttl_lines-1) * MAX_TILES * 64], 0, MAX_TILES * 64 * sizeof(*tile_storage));
+                refresh_screen();
+                break; };
             case 'Y': // copy to system clipboard
                 do_sysclip_yank(); break;
             case 'q': // exit running loop
