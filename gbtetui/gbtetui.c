@@ -16,6 +16,7 @@ int *tile_storage;
 int cur_pos[4]; // row, col, line, tile
 int ttl_lines = 1;
 int sb_cp = 4;  // color pair index for statusbar
+int show_indexes = 1;
 
 void hextile_to_colors(const char hex_str[33]) {
     int ctr = 0;
@@ -35,7 +36,7 @@ void hextile_to_colors(const char hex_str[33]) {
         };
 
         // Pixels to colors
-        for (int bit = 7; bit >= 0; bit--) { tile_storage[cur_pos[2] * MAX_TILES * 64 + cur_pos[3] * 64 + ctr++] = (((hi >> bit) & 1) << 1) | ((lo >> bit) & 1); };
+        for (int bit = 7; bit >= 0; bit--) { tile_storage[CUR_TILE_INDEX + ctr++] = (((hi >> bit) & 1) << 1) | ((lo >> bit) & 1); };
     };
 }
 
@@ -46,7 +47,7 @@ void tile_to_hex(char *tile_hex){
         unsigned char lo = 0, hi = 0;
 
         for (int x = 0; x < 8; ++x) {
-            unsigned char v = tile_storage[cur_pos[2] * MAX_TILES * 64 + cur_pos[3] * 64 + (y * 8 + x)] & 0x03;
+            unsigned char v = tile_storage[CUR_TILE_INDEX + (y * 8 + x)] & 0x03;
             lo |= (v & 1) << (7 - x);        // bit 0
             hi |= ((v >> 1) & 1) << (7 - x); // bit 1
         };
@@ -78,10 +79,12 @@ void draw_tile (WINDOW *window, int row, int col, int line_index, int tile_index
         wattroff(window, COLOR_PAIR(tile_storage[DT_TILE_INDEX]));
     }; };
     // draw bottom separator
-    is_sel = (cur_pos[2] == line_index && tile_index == cur_pos[3]);
-    wattron(window, COLOR_PAIR((is_sel) ? 8: 7));
-    mvwprintw(window, row+8, col,"%d:%03d           ", line_index+1, tile_index);
-    wattroff(window, COLOR_PAIR((is_sel) ? 8: 7));
+    if (show_indexes) {
+        is_sel = (cur_pos[2] == line_index && tile_index == cur_pos[3]);
+        wattron(window, COLOR_PAIR((is_sel) ? 8: 7));
+        mvwprintw(window, row+8, col,"%d:%03d           ", line_index+1, tile_index);
+        wattroff(window, COLOR_PAIR((is_sel) ? 8: 7));
+    };
 }
 
 void draw_status_bar() {
@@ -133,7 +136,7 @@ void refresh_screen () {
 
     int side_tiles_num = (COLS-18)/16/2;
     for (int line_ind = 0; line_ind < ttl_lines; ++line_ind) {
-        int start_col = 1, start_row = 2 + (line_ind * 9);
+        int start_col = 1, start_row = 2 + (line_ind * ((show_indexes) ? 9: 8));
         for (int tile_ind = cur_pos[3] - side_tiles_num; tile_ind < cur_pos[3]+side_tiles_num+1; ++tile_ind) {
             if (tile_ind > 0 && tile_ind < MAX_TILES) { draw_tile(stdscr, start_row, start_col, line_ind, tile_ind);
             } else { draw_tile(stdscr, start_row, start_col, line_ind, 0); };
@@ -234,15 +237,17 @@ int main (int argc, char *argv[]) {
             case '+': { // increase number of tile lines
                 if (LINES-4-((ttl_lines+1)*8) < 0) { break; };
                 ++ttl_lines;
-                ++cur_pos[2];
+                cur_pos[2] = ttl_lines-1;
                 int *tmp_tile_storage = realloc(tile_storage, ttl_lines*MAX_TILES*64*sizeof(*tile_storage));
-                if (tmp_tile_storage == NULL) { break; }; // TODO: print allocation error under status bar
+                if (tmp_tile_storage == NULL) { break; }; // TODO: print allocation error under status bar?
                 tile_storage = tmp_tile_storage;
                 memset(&tile_storage[(ttl_lines-1) * MAX_TILES * 64], 0, MAX_TILES * 64 * sizeof(*tile_storage));
                 refresh_screen();
                 break; };
             case 'Y': // copy to system clipboard
                 do_sysclip_yank(); break;
+            case 't': // toggle tile indexes
+                show_indexes = (show_indexes) ? 0 : 1; refresh_screen(); break;
             case 'q': // exit running loop
                 running = 0; break;
             case KEY_ESC: { // receive ctrl+v paste
