@@ -10,6 +10,7 @@ Basic TUI gameboy tile editor.
 - Z/X/C/V - fill tile with 0/1/2/3 color.
 - -/+ - remove/add line.
 - Y - copy to system clipboard.
+- t - toggle visibility of tile indexes.
 - Ctrl-v - paste from system clipboard.
 - q - exit.
 
