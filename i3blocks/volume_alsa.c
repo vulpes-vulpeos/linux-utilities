@@ -2,11 +2,12 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define ALSA_CARD "default"
 #define ALSA_SELEMNAME "Master"
 
-enum mouse_buttons { DUMMY, BTNL, BTNM, BTNR, SCWLU, SCWLD, SCWLL, SCWLR, BTNF, BTNB };
+enum mouse_buttons { DUMMY, BTNL, BTNM, BTNR, SCWLU, SCWLD, SCWLL, SCWLR, BTNB, BTNF };
 unsigned int volume_wav_len = 1178;
 unsigned char volume_wav[]   = { // Mono 11025Hz Signed 16-bit PCM
     0x52, 0x49, 0x46, 0x46, 0x92, 0x04, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45, 0x66, 0x6D, 0x74, 0x20, 0x10, 0x00, 0x00,
@@ -118,19 +119,15 @@ int get_vol_perc_exp(long min_db, long max_db, long cur_db) {
 
 // gcc volume_alsa.c -o volume_alsa -lasound -lm
 int main() {
+    int notif = 1;
     char* button = getenv("BLOCK_BUTTON");
     if (button != NULL) {
         switch (atoi(button)) {
-            case BTNL:
-                system("amixer -q set Master toggle");
-                break;
-            case SCWLU:
-                system("amixer -q set Master 2dB+");
-                break;
-            case SCWLD:
-                system("amixer -q set Master 2dB-");
-                break;
-            default: break;
+            case BTNL:  system("amixer -q set Master toggle"); break;
+            case SCWLU: system("amixer -q set Master 2dB+"); break;
+            case SCWLD: system("amixer -q set Master 2dB-"); break;
+            case BTNB:  system("amixer -q -- sset Master -52dB"); break;
+            default:    notif = 0; break;
         };
     };
 
@@ -159,11 +156,13 @@ int main() {
     printf("%s %lddB%s\n", (speaker) ? "󰓃" : " ", cur_db/100, (mute) ? "" : "[X]");
 
     // send notifcation (~118 chars if muted)
-    char cmd_notif[128] = {0};
-    snprintf(cmd_notif, sizeof(cmd_notif), "notify-send -t 500 -h string:x-dunst-stack-tag:cur_vol_notif -a 'cur_vol_notif' '%s %lddB%s' -h 'int:value:%d'",
-                                            (speaker) ? "󰓃" : "", cur_db/100, (mute) ? "" : " (muted)", get_vol_perc_exp(min_db, max_db, cur_db));
-    system(cmd_notif);
-    play_sound();
+    if (notif) {
+        char cmd_notif[128] = {0};
+        snprintf(cmd_notif, sizeof(cmd_notif), "notify-send -t 500 -h string:x-dunst-stack-tag:cur_vol_notif -a 'cur_vol_notif' '%s %lddB%s' -h 'int:value:%d'",
+                                        (speaker) ? "Speakers:" : "Headphones:", cur_db/100, (mute) ? "" : " (muted)", get_vol_perc_exp(min_db, max_db, cur_db));
+        system(cmd_notif);
+        play_sound();
+    };
 
     return 0;
 }
